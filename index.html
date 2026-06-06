@@ -13,73 +13,113 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{min-height:100%;background:#070b12;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent}
-    .wrap{padding:max(env(safe-area-inset-top),24px) 16px 48px}
+    .wrap{padding:max(env(safe-area-inset-top),24px) 16px 56px}
+    /* Typography */
     .badge{background:linear-gradient(90deg,#3b82f6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;display:block;text-align:center;margin-bottom:6px}
     h1{font-size:22px;font-weight:700;color:#f1f5f9;text-align:center;margin-bottom:4px}
     .sub{color:#475569;font-size:12px;text-align:center;margin-bottom:16px}
-    .live-card{background:rgba(255,255,255,.025);border:1px solid rgba(59,130,246,.25);border-radius:14px;padding:14px;margin-bottom:14px;position:relative;overflow:hidden}
-    .live-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+    .section-title{font-size:10px;color:#475569;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
+    /* Cards */
+    .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;margin-bottom:14px}
+    .card-accent{background:rgba(255,255,255,.025);border-radius:14px;padding:14px;margin-bottom:14px;position:relative;overflow:hidden}
+    .card-accent::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .card-blue::before{background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+    .card-green::before{background:linear-gradient(90deg,#22c55e,#06b6d4)}
+    .card-purple::before{background:linear-gradient(90deg,#a78bfa,#ec4899)}
+    .card-orange::before{background:linear-gradient(90deg,#f59e0b,#ef4444)}
+    /* Live card */
     .live-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
     .live-title{font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase}
     .live-refresh{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:5px 10px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer}
     .live-price-row{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
     .live-price{font-family:ui-monospace,monospace;font-size:26px;font-weight:700;color:#f1f5f9}
     .live-change{font-size:13px;font-weight:600;border-radius:6px;padding:2px 7px}
-    .pos{background:rgba(34,197,94,.15);color:#4ade80}
-    .neg{background:rgba(239,68,68,.15);color:#f87171}
     .live-returns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
     .ret-box{background:rgba(255,255,255,.03);border-radius:8px;padding:8px 4px;text-align:center}
     .ret-lbl{font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
     .ret-num{font-family:ui-monospace,monospace;font-size:13px;font-weight:600}
+    .pos{color:#4ade80}.neg{color:#f87171}
+    .pos-bg{background:rgba(34,197,94,.15);color:#4ade80}
+    .neg-bg{background:rgba(239,68,68,.15);color:#f87171}
     .live-apply{width:100%;background:linear-gradient(135deg,#1d4ed8,#0891b2);border:none;border-radius:10px;padding:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
     .live-meta{font-size:10px;color:#334155;text-align:center;margin-top:8px}
     .live-loading{text-align:center;padding:16px;color:#475569;font-size:12px}
     .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(59,130,246,.3);border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
     @keyframes spin{to{transform:rotate(360deg)}}
-    /* Fallback card */
-    .ref-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:10px}
-    .ref-box{background:rgba(255,255,255,.03);border-radius:8px;padding:8px 10px}
-    .ref-lbl{font-size:10px;color:#475569;margin-bottom:2px}
-    .ref-val{font-family:ui-monospace,monospace;font-size:14px;font-weight:600;color:#4ade80}
-    .ref-note{font-size:10px;color:#334155;margin-top:2px}
-    .toggle-row{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:14px}
-    .toggle-label{font-size:11px;color:#64748b}
-    .tog{border-radius:10px;padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600;line-height:1.4;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#64748b}
-    .tog.active{background:linear-gradient(135deg,#1d4ed8,#0891b2);border-color:#3b82f6;color:#fff}
-    .notice{border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:8px}
-    .notice.warn{background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.22);color:#a78bfa}
-    .notice.ok{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);color:#4ade80}
-    .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;margin-bottom:14px}
-    .slider-row{display:flex;flex-direction:column;gap:18px}
+    /* Sliders */
+    .slider-row{display:flex;flex-direction:column;gap:16px}
     .sl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
     .sl-lbl{font-size:10px;color:#475569;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
     .sl-val{font-family:ui-monospace,monospace;font-size:16px;font-weight:600;color:#38bdf8}
     input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:rgba(255,255,255,.12);outline:none;margin:0}
     input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#3b82f6;border:2px solid #1e40af;cursor:pointer}
     .sl-minmax{display:flex;justify-content:space-between;font-size:10px;color:#334155;margin-top:2px}
+    .slider-divider{border:none;border-top:1px solid rgba(255,255,255,.05);margin:4px 0}
+    /* Toggle */
+    .toggle-row{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:14px}
+    .toggle-label{font-size:11px;color:#64748b}
+    .tog{border-radius:10px;padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600;line-height:1.4;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#64748b}
+    .tog.active{background:linear-gradient(135deg,#1d4ed8,#0891b2);border-color:#3b82f6;color:#fff}
+    /* Notice */
+    .notice{border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:8px}
+    .notice.warn{background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.22);color:#a78bfa}
+    .notice.ok{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);color:#4ade80}
+    /* Summary cards */
     .cards4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-    .c4{background:rgba(255,255,255,.025);border:1px solid rgba(59,130,246,.18);border-radius:12px;padding:12px 6px;text-align:center;position:relative;overflow:hidden}
+    .c4{background:rgba(255,255,255,.025);border:1px solid rgba(59,130,246,.18);border-radius:12px;padding:10px 5px;text-align:center;position:relative;overflow:hidden}
     .c4::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#3b82f6,#06b6d4)}
-    .c4-yr{font-size:10px;color:#475569;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
-    .c4-val{font-family:ui-monospace,monospace;font-size:12px;font-weight:600;color:#f1f5f9;margin-bottom:4px}
-    .c4-gain{font-size:11px;color:#22c55e;font-weight:600}
+    .c4-yr{font-size:9px;color:#475569;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+    .c4-val{font-family:ui-monospace,monospace;font-size:11px;font-weight:600;color:#f1f5f9;margin-bottom:3px}
+    .c4-gain{font-size:10px;color:#22c55e;font-weight:600}
+    .c4-real{font-size:9px;color:#64748b;margin-top:3px;border-top:1px solid rgba(255,255,255,.05);padding-top:3px}
     .c4-free{font-size:9px;color:#a78bfa;margin-top:2px}
+    /* Insight cards */
+    .insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .ins{background:rgba(255,255,255,.025);border-radius:12px;padding:12px;position:relative;overflow:hidden}
+    .ins::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .ins-tax::before{background:linear-gradient(90deg,#f59e0b,#ef4444)}
+    .ins-break::before{background:linear-gradient(90deg,#22c55e,#06b6d4)}
+    .ins-icon{font-size:20px;margin-bottom:6px}
+    .ins-lbl{font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+    .ins-val{font-family:ui-monospace,monospace;font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:2px}
+    .ins-sub{font-size:10px;color:#475569}
+    /* Bank comparison */
+    .bank-compare{margin-bottom:14px}
+    .compare-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .compare-label{font-size:11px;color:#64748b;width:60px;flex-shrink:0}
+    .compare-bar-wrap{flex:1;background:rgba(255,255,255,.05);border-radius:4px;height:20px;overflow:hidden;position:relative}
+    .compare-bar{height:100%;border-radius:4px;transition:width .4s}
+    .compare-val{font-family:ui-monospace,monospace;font-size:11px;font-weight:600;width:72px;text-align:right;flex-shrink:0}
+    /* Target calculator */
+    .target-card{background:rgba(255,255,255,.025);border:1px solid rgba(167,139,250,.2);border-radius:14px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden}
+    .target-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#a78bfa,#ec4899)}
+    .target-inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+    .target-result{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:12px;text-align:center}
+    .target-monthly{font-family:ui-monospace,monospace;font-size:24px;font-weight:700;color:#a78bfa;margin-bottom:4px}
+    .target-sub{font-size:11px;color:#64748b}
+    /* Chart */
     .chart-wrap{background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:16px 8px 12px;margin-bottom:14px}
     .chart-title{font-size:10px;color:#475569;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center;margin-bottom:12px}
     svg.chart{width:100%;display:block}
-    .legend{display:flex;justify-content:center;gap:14px;margin-top:8px}
+    .legend{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:8px}
     .leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#475569}
     .leg-dot{width:8px;height:8px;border-radius:2px;display:inline-block}
     .footer{text-align:center;font-size:10px;color:#1e293b;padding:0 8px}
+    /* Number input */
+    .num-input-wrap{display:flex;flex-direction:column;gap:4px}
+    .num-input-wrap label{font-size:10px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+    .num-input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:10px 12px;color:#f1f5f9;font-size:14px;font-family:ui-monospace,monospace;width:100%;outline:none}
+    .num-input:focus{border-color:#3b82f6}
   </style>
 </head>
 <body>
 <div class="wrap">
   <span class="badge">MSCI World ETF · Aktiesparekonto</span>
   <h1>Investeringsberegner</h1>
-  <p class="sub">ASK 17% · Frie midler 27/42% lagerbeskatning</p>
+  <p class="sub">ASK 17% · Frie midler 27/42% · Inflation · Skat · Mål</p>
 
-  <div class="live-card">
+  <!-- Live ETF -->
+  <div class="card-accent card-blue" style="border:1px solid rgba(59,130,246,.25)">
     <div class="live-top">
       <span class="live-title">📈 IWDA · Euronext Amsterdam</span>
       <button class="live-refresh" onclick="fetchETF()">↻ Opdater</button>
@@ -87,6 +127,7 @@
     <div id="live-body"><div class="live-loading"><span class="spinner"></span>Henter kursdata...</div></div>
   </div>
 
+  <!-- Loft toggle -->
   <div class="toggle-row">
     <span class="toggle-label">ASK-loft:</span>
     <button class="tog" id="tog174" onclick="setLoft('174k')">174.200 kr.<br><span style="font-size:10px;opacity:.75">Nuværende</span></button>
@@ -95,28 +136,87 @@
 
   <div class="notice" id="notice"></div>
 
+  <!-- Sliders -->
   <div class="card">
+    <div class="section-title">⚙️ Indstillinger</div>
     <div class="slider-row">
       <div>
         <div class="sl-top"><span class="sl-lbl">Startbeløb</span><span class="sl-val" id="v-start">50.000 kr.</span></div>
-        <input type="range" min="0" max="500000" step="5000" value="50000" id="sl-start" oninput="update()"/>
+        <input type="range" min="0" max="500000" step="5000" value="50000" id="sl-start" oninput="saveAndUpdate()"/>
         <div class="sl-minmax"><span>0 kr.</span><span>500.000 kr.</span></div>
       </div>
       <div>
         <div class="sl-top"><span class="sl-lbl">Månedlig investering</span><span class="sl-val" id="v-monthly">5.000 kr.</span></div>
-        <input type="range" min="0" max="20000" step="500" value="5000" id="sl-monthly" oninput="update()"/>
+        <input type="range" min="0" max="20000" step="500" value="5000" id="sl-monthly" oninput="saveAndUpdate()"/>
         <div class="sl-minmax"><span>0 kr.</span><span>20.000 kr.</span></div>
       </div>
       <div>
         <div class="sl-top"><span class="sl-lbl">Forventet afkast p.a.</span><span class="sl-val" id="v-return">8%</span></div>
-        <input type="range" min="3" max="15" step="0.5" value="8" id="sl-return" oninput="update()"/>
+        <input type="range" min="3" max="15" step="0.5" value="8" id="sl-return" oninput="saveAndUpdate()"/>
         <div class="sl-minmax"><span>3%</span><span>15%</span></div>
+      </div>
+      <hr class="slider-divider"/>
+      <div>
+        <div class="sl-top"><span class="sl-lbl">Inflation p.a.</span><span class="sl-val" id="v-inflation">2%</span></div>
+        <input type="range" min="0" max="6" step="0.5" value="2" id="sl-inflation" oninput="saveAndUpdate()"/>
+        <div class="sl-minmax"><span>0%</span><span>6%</span></div>
+      </div>
+      <div>
+        <div class="sl-top"><span class="sl-lbl">Bankrente (sammenligning)</span><span class="sl-val" id="v-bank">2%</span></div>
+        <input type="range" min="0" max="6" step="0.25" value="2" id="sl-bank" oninput="saveAndUpdate()"/>
+        <div class="sl-minmax"><span>0%</span><span>6%</span></div>
       </div>
     </div>
   </div>
 
+  <!-- Summary cards -->
+  <div class="section-title" style="padding-left:2px">📊 Formue efter skat</div>
   <div class="cards4" id="cards4"></div>
 
+  <!-- Insights row -->
+  <div class="section-title" style="padding-left:2px">💡 Indsigter</div>
+  <div class="insight-grid">
+    <div class="ins ins-tax">
+      <div class="ins-icon">🧾</div>
+      <div class="ins-lbl">Samlet skat betalt</div>
+      <div class="ins-val" id="ins-tax-val">–</div>
+      <div class="ins-sub" id="ins-tax-sub">over 20 år</div>
+    </div>
+    <div class="ins ins-break">
+      <div class="ins-icon">⚡</div>
+      <div class="ins-lbl">Break-even år</div>
+      <div class="ins-val" id="ins-break-val">–</div>
+      <div class="ins-sub" id="ins-break-sub">afkast > månedligt indskud</div>
+    </div>
+  </div>
+
+  <!-- Bank comparison -->
+  <div class="card" id="bank-card">
+    <div class="section-title">🏦 ETF vs. opsparingskonto (20 år)</div>
+    <div id="bank-compare"></div>
+  </div>
+
+  <!-- Target calculator -->
+  <div class="target-card">
+    <div class="section-title">🎯 Hvad skal jeg spare op til?</div>
+    <p style="font-size:12px;color:#64748b;margin-bottom:12px">Indtast dit målbeløb og tidshorisont – få det månedlige beløb du skal investere.</p>
+    <div class="target-inputs">
+      <div class="num-input-wrap">
+        <label>Målbeløb</label>
+        <input type="number" class="num-input" id="target-amount" value="3000000" min="0" step="100000" oninput="updateTarget()"/>
+      </div>
+      <div class="num-input-wrap">
+        <label>År</label>
+        <input type="number" class="num-input" id="target-years" value="20" min="1" max="40" oninput="updateTarget()"/>
+      </div>
+    </div>
+    <div class="target-result">
+      <div class="target-monthly" id="target-monthly">–</div>
+      <div class="target-sub" id="target-sub">månedligt ved <span id="target-ret">8</span>% afkast og 17% ASK-skat</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
   <div class="chart-wrap">
     <div class="chart-title">Formueudvikling 20 år</div>
     <svg class="chart" id="chart" viewBox="0 0 340 180"></svg>
@@ -124,325 +224,314 @@
       <span class="leg"><span class="leg-dot" style="background:#3b82f6"></span>ASK (17%)</span>
       <span class="leg"><span class="leg-dot" style="background:#a78bfa"></span>Frie midler</span>
       <span class="leg"><span class="leg-dot" style="background:#475569"></span>Indskudt</span>
+      <span class="leg"><span class="leg-dot" style="background:#f59e0b"></span>Bank</span>
     </div>
   </div>
 
-  <p class="footer">Vejledende beregning. Lagerbeskatning trækkes hvert år. MSCI World historisk ~8–10% p.a.</p>
+  <p class="footer">© Rasmus Lund Larsen 2026</p>
 </div>
 
 <script>
-// ── IWDA historiske referencedata (opdateres manuelt) ─────
-// Kilde: iShares / Morningstar per maj 2025
-var FALLBACK = {
-  ret1:  23.5,   // 1 år
-  ret3:   9.8,   // 3 år p.a.
-  ret5:  15.2,   // 5 år p.a.
-  ret10: 12.4,   // 10 år p.a.
-  asOf: 'maj 2025'
-};
+// ── Fallback ETF data ────────────────────────────────────
+var FALLBACK={ret1:23.5,ret3:9.8,ret5:15.2,ret10:12.4,asOf:'maj 2025'};
+var loftMode='500k';
+var suggestedReturn=8;
 
-var loftMode = '500k';
-var suggestedReturn = 8;
-
-// ── ETF fetch: prøv flere metoder ─────────────────────────
-function fetchETF() {
-  document.getElementById('live-body').innerHTML =
-    '<div class="live-loading"><span class="spinner"></span>Henter kursdata...</div>';
-
-  var ticker = 'IWDA.AS';
-  var range  = '11y';
-  var yahooBase = 'https://query1.finance.yahoo.com/v8/finance/chart/' + ticker
-                + '?interval=1mo&range=' + range + '&includePrePost=false';
-  var yahoo2    = 'https://query2.finance.yahoo.com/v8/finance/chart/' + ticker
-                + '?interval=1mo&range=' + range + '&includePrePost=false';
-
-  var proxies = [
-    'https://corsproxy.io/?url=' + encodeURIComponent(yahooBase),
-    'https://api.allorigins.win/raw?url=' + encodeURIComponent(yahooBase),
-    'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(yahooBase),
-    'https://corsproxy.io/?url=' + encodeURIComponent(yahoo2),
-    'https://thingproxy.freeboard.io/fetch/' + yahooBase,
-  ];
-
-  // Also try direct (works on some networks)
-  var attempts = [yahooBase, yahoo2].concat(proxies);
-
-  tryNext(attempts, 0);
+// ── LocalStorage ─────────────────────────────────────────
+function saveSettings(){
+  try{
+    localStorage.setItem('inv_settings',JSON.stringify({
+      start:+document.getElementById('sl-start').value,
+      monthly:+document.getElementById('sl-monthly').value,
+      ret:+document.getElementById('sl-return').value,
+      inflation:+document.getElementById('sl-inflation').value,
+      bank:+document.getElementById('sl-bank').value,
+      loft:loftMode,
+      targetAmount:+document.getElementById('target-amount').value,
+      targetYears:+document.getElementById('target-years').value
+    }));
+  }catch(e){}
 }
+function loadSettings(){
+  try{
+    var s=JSON.parse(localStorage.getItem('inv_settings')||'{}');
+    if(s.start!=null) document.getElementById('sl-start').value=s.start;
+    if(s.monthly!=null) document.getElementById('sl-monthly').value=s.monthly;
+    if(s.ret!=null) document.getElementById('sl-return').value=s.ret;
+    if(s.inflation!=null) document.getElementById('sl-inflation').value=s.inflation;
+    if(s.bank!=null) document.getElementById('sl-bank').value=s.bank;
+    if(s.loft) { loftMode=s.loft; document.getElementById('tog'+s.loft.replace('k','')+'').className='tog active'; document.getElementById(s.loft==='500k'?'tog174':'tog500').className='tog'; }
+    if(s.targetAmount!=null) document.getElementById('target-amount').value=s.targetAmount;
+    if(s.targetYears!=null) document.getElementById('target-years').value=s.targetYears;
+  }catch(e){}
+}
+function saveAndUpdate(){ saveSettings(); update(); }
 
-function tryNext(attempts, i) {
-  if (i >= attempts.length) {
-    renderFallback();
-    return;
-  }
-  var controller = new AbortController();
-  var timer = setTimeout(function(){ controller.abort(); }, 6000);
-
-  fetch(attempts[i], { signal: controller.signal })
-    .then(function(r) {
-      clearTimeout(timer);
-      return r.json();
-    })
-    .then(function(json) {
-      var res = json && json.chart && json.chart.result && json.chart.result[0];
-      if (!res) throw new Error('no result');
+// ── ETF fetch ────────────────────────────────────────────
+function fetchETF(){
+  document.getElementById('live-body').innerHTML='<div class="live-loading"><span class="spinner"></span>Henter kursdata...</div>';
+  var base='https://query1.finance.yahoo.com/v8/finance/chart/IWDA.AS?interval=1mo&range=11y&includePrePost=false';
+  var q2=base.replace('query1','query2');
+  var proxies=[
+    'https://corsproxy.io/?url='+encodeURIComponent(base),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(base),
+    'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(base),
+    'https://corsproxy.io/?url='+encodeURIComponent(q2),
+    'https://thingproxy.freeboard.io/fetch/'+base,
+  ];
+  tryNext([base,q2].concat(proxies),0);
+}
+function tryNext(attempts,i){
+  if(i>=attempts.length){renderFallback();return;}
+  var ctrl=new AbortController();
+  var t=setTimeout(function(){ctrl.abort();},6000);
+  fetch(attempts[i],{signal:ctrl.signal})
+    .then(function(r){clearTimeout(t);return r.json();})
+    .then(function(j){
+      var res=j&&j.chart&&j.chart.result&&j.chart.result[0];
+      if(!res)throw new Error();
       processYahoo(res);
     })
-    .catch(function() {
-      clearTimeout(timer);
-      tryNext(attempts, i + 1);
-    });
+    .catch(function(){clearTimeout(t);tryNext(attempts,i+1);});
 }
-
-function processYahoo(res) {
-  var closes = res.indicators.adjclose[0].adjclose;
-  var timestamps = res.timestamp;
-  var pts = [];
-  for (var i = 0; i < closes.length; i++) {
-    if (closes[i] != null) pts.push({ t: timestamps[i], p: closes[i] });
-  }
-  var cur = pts[pts.length - 1].p;
-  var curT = pts[pts.length - 1].t;
-  var prev = pts[pts.length - 2] ? pts[pts.length - 2].p : cur;
-
-  function pBack(months) {
-    var target = curT - months * 30.44 * 86400;
-    var best = null, bestD = Infinity;
-    for (var i = 0; i < pts.length; i++) {
-      var d = Math.abs(pts[i].t - target);
-      if (d < bestD) { bestD = d; best = pts[i]; }
-    }
-    return best ? best.p : null;
-  }
-
-  function annRet(old, yrs) {
-    if (!old) return null;
-    return (Math.pow(cur / old, 1 / yrs) - 1) * 100;
-  }
-
-  var p1 = pBack(12), p3 = pBack(36), p5 = pBack(60), p10 = pBack(120);
-  var data = {
-    price:     cur,
-    currency:  res.meta.currency || 'USD',
-    dayChange: (cur / prev - 1) * 100,
-    ret1:  p1  ? (cur / p1  - 1) * 100 : null,
-    ret3:  annRet(p3, 3),
-    ret5:  annRet(p5, 5),
-    ret10: annRet(p10, 10),
-    live:  true
-  };
-  renderLive(data);
+function processYahoo(res){
+  var closes=res.indicators.adjclose[0].adjclose;
+  var ts=res.timestamp;
+  var pts=[];
+  for(var i=0;i<closes.length;i++){if(closes[i]!=null)pts.push({t:ts[i],p:closes[i]});}
+  var cur=pts[pts.length-1].p,curT=pts[pts.length-1].t;
+  var prev=pts[pts.length-2]?pts[pts.length-2].p:cur;
+  function pBack(mo){var tgt=curT-mo*30.44*86400,best=null,bD=Infinity;for(var i=0;i<pts.length;i++){var d=Math.abs(pts[i].t-tgt);if(d<bD){bD=d;best=pts[i];}}return best?best.p:null;}
+  function ann(old,y){return old?(Math.pow(cur/old,1/y)-1)*100:null;}
+  var p1=pBack(12),p3=pBack(36),p5=pBack(60),p10=pBack(120);
+  renderLive({price:cur,currency:res.meta.currency||'USD',dayChange:(cur/prev-1)*100,ret1:p1?(cur/p1-1)*100:null,ret3:ann(p3,3),ret5:ann(p5,5),ret10:ann(p10,10),live:true});
 }
-
-function renderLive(d) {
-  var chgCls = d.dayChange >= 0 ? 'pos' : 'neg';
-  var chgSign = d.dayChange >= 0 ? '+' : '';
-  var time = new Date().toLocaleTimeString('da-DK', { hour:'2-digit', minute:'2-digit' });
-
-  function retBox(val, lbl) {
-    if (val == null) return '<div class="ret-box"><div class="ret-lbl">'+lbl+'</div><div class="ret-num" style="color:#475569">–</div></div>';
-    var cls = val >= 0 ? 'pos' : 'neg';
-    return '<div class="ret-box"><div class="ret-lbl">'+lbl+'</div><div class="ret-num '+cls+'">'+(val>=0?'+':'')+val.toFixed(1)+'%</div></div>';
+function renderLive(d){
+  var chgCls=d.dayChange>=0?'pos-bg':'neg-bg';
+  var time=new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
+  function rBox(v,l){
+    if(v==null)return '<div class="ret-box"><div class="ret-lbl">'+l+'</div><div class="ret-num" style="color:#475569">–</div></div>';
+    return '<div class="ret-box"><div class="ret-lbl">'+l+'</div><div class="ret-num '+(v>=0?'pos':'neg')+'">'+(v>=0?'+':'')+v.toFixed(1)+'%</div></div>';
   }
-
-  var r10 = d.ret10 || d.ret5 || 8;
-  suggestedReturn = Math.min(Math.max(Math.round(r10 * 2) / 2, 3), 15);
-
-  var html = '';
-  html += '<div class="live-price-row">';
-  html += '<span class="live-price">'+d.price.toFixed(2)+' '+d.currency+'</span>';
-  html += '<span class="live-change '+chgCls+'">'+chgSign+d.dayChange.toFixed(2)+'% i dag</span>';
-  html += '</div>';
-  html += '<div class="live-returns">';
-  html += retBox(d.ret1,'1 år') + retBox(d.ret3,'3 år p.a.') + retBox(d.ret5,'5 år p.a.') + retBox(d.ret10,'10 år p.a.');
-  html += '</div>';
-  html += '<button class="live-apply" onclick="applyReturn('+suggestedReturn+')">⚡ Brug 10-års afkast ('+suggestedReturn+'%) i beregner</button>';
-  html += '<div class="live-meta">Live kurs · opdateret kl. '+time+' · ~15 min. forsinkelse</div>';
-  document.getElementById('live-body').innerHTML = html;
+  var r10=d.ret10||d.ret5||8;
+  suggestedReturn=Math.min(Math.max(Math.round(r10*2)/2,3),15);
+  var html='<div class="live-price-row"><span class="live-price">'+d.price.toFixed(2)+' '+d.currency+'</span><span class="live-change '+chgCls+'">'+(d.dayChange>=0?'+':'')+d.dayChange.toFixed(2)+'% i dag</span></div>';
+  html+='<div class="live-returns">'+rBox(d.ret1,'1 år')+rBox(d.ret3,'3 år p.a.')+rBox(d.ret5,'5 år p.a.')+rBox(d.ret10,'10 år p.a.')+'</div>';
+  html+='<button class="live-apply" onclick="applyReturn('+suggestedReturn+')">⚡ Brug 10-års afkast ('+suggestedReturn+'%) i beregner</button>';
+  html+='<div class="live-meta">'+(d.live?'Live kurs · opdateret kl. '+time+' · ~15 min. forsinkelse':'📊 Historiske referencetal ('+FALLBACK.asOf+')')+'</div>';
+  document.getElementById('live-body').innerHTML=html;
 }
-
-function renderFallback() {
-  var f = FALLBACK;
-  suggestedReturn = Math.min(Math.max(Math.round((f.ret10 || 8) * 2) / 2, 3), 15);
-
-  function retBox(val, lbl) {
-    var cls = val >= 0 ? 'pos' : 'neg';
-    return '<div class="ret-box"><div class="ret-lbl">'+lbl+'</div><div class="ret-num '+cls+'">'+(val>=0?'+':'')+val.toFixed(1)+'%</div></div>';
-  }
-
-  var html = '';
-  html += '<div style="font-size:11px;color:#64748b;margin-bottom:8px;">📊 Historiske afkast (kilde: iShares, '+f.asOf+')</div>';
-  html += '<div class="live-returns">';
-  html += retBox(f.ret1,'1 år') + retBox(f.ret3,'3 år p.a.') + retBox(f.ret5,'5 år p.a.') + retBox(f.ret10,'10 år p.a.');
-  html += '</div>';
-  html += '<button class="live-apply" onclick="applyReturn('+suggestedReturn+')">⚡ Brug 10-års snit ('+suggestedReturn+'%) i beregner</button>';
-  html += '<div class="live-meta" style="color:#475569">Live kurs ikke tilgængelig · viser historiske referencetal</div>';
-  document.getElementById('live-body').innerHTML = html;
+function renderFallback(){
+  suggestedReturn=Math.min(Math.max(Math.round((FALLBACK.ret10||8)*2)/2,3),15);
+  renderLive({dayChange:0,ret1:FALLBACK.ret1,ret3:FALLBACK.ret3,ret5:FALLBACK.ret5,ret10:FALLBACK.ret10,live:false,price:0,currency:''});
+  document.querySelector('.live-price-row').style.display='none';
 }
-
-function applyReturn(val) {
-  document.getElementById('sl-return').value = val;
-  update();
-  var btn = document.querySelector('.live-apply');
-  if (btn) {
-    var orig = btn.textContent;
-    btn.textContent = '✓ Anvendt!';
-    setTimeout(function() { btn.textContent = orig; }, 1500);
-  }
+function applyReturn(val){
+  document.getElementById('sl-return').value=val;
+  saveAndUpdate();
+  var btn=document.querySelector('.live-apply');
+  if(btn){var o=btn.textContent;btn.textContent='✓ Anvendt!';setTimeout(function(){btn.textContent=o;},1500);}
 }
 
 // ── Loft ─────────────────────────────────────────────────
-function setLoft(m) {
-  loftMode = m;
-  document.getElementById('tog174').className = 'tog' + (m==='174k' ? ' active' : '');
-  document.getElementById('tog500').className = 'tog' + (m==='500k' ? ' active' : '');
-  update();
+function setLoft(m){
+  loftMode=m;
+  document.getElementById('tog174').className='tog'+(m==='174k'?' active':'');
+  document.getElementById('tog500').className='tog'+(m==='500k'?' active':'');
+  saveAndUpdate();
 }
 
-// ── Helpers ───────────────────────────────────────────────
-function fmtDKK(v) {
-  if (v >= 1e6) return (v/1e6).toFixed(2).replace('.',',')+' mio.';
-  return Math.round(v).toLocaleString('da-DK')+' kr.';
-}
-function fmtShort(v) {
-  if (v >= 1e6) return (v/1e6).toFixed(1).replace('.',',')+' M';
-  if (v >= 1e3) return (v/1e3).toFixed(0)+' K';
-  return Math.round(v)+'';
-}
+// ── Format helpers ────────────────────────────────────────
+function fDKK(v){if(v>=1e6)return (v/1e6).toFixed(2).replace('.',',')+' mio.';return Math.round(v).toLocaleString('da-DK')+' kr.';}
+function fShort(v){if(v>=1e6)return (v/1e6).toFixed(1).replace('.',',')+' M';if(v>=1e3)return (v/1e3).toFixed(0)+' K';return Math.round(v)+'';}
 
 // ── Simulate ──────────────────────────────────────────────
-function simulate(start, monthly, ret, years, loft) {
-  var mr = Math.pow(1+ret, 1/12)-1;
-  var aV=Math.min(start,loft), aYS=aV, aIn=aV;
-  var fV=Math.max(0,start-loft), fYS=fV, fIn=fV;
-  var fCarry=0, loftHit=null, rows=[];
-  for (var yr=1; yr<=years; yr++) {
-    var aC=0, fC=0;
-    for (var m=0; m<12; m++) {
-      if (aV < loft) {
-        var room=loft-aV, dep=Math.min(monthly,room);
-        aV=aV*(1+mr)+dep; aC+=dep;
-        var ov=monthly-dep;
-        if (ov>0) { fV=fV*(1+mr)+ov; fC+=ov; }
-      } else {
-        aV=aV*(1+mr);
-        fV=fV*(1+mr)+monthly; fC+=monthly;
-        if (!loftHit) loftHit=yr;
-      }
+function simulate(start,monthly,ret,years,loft){
+  var mr=Math.pow(1+ret,1/12)-1;
+  var aV=Math.min(start,loft),aYS=aV,aIn=aV;
+  var fV=Math.max(0,start-loft),fYS=fV,fIn=fV;
+  var fCarry=0,loftHit=null,rows=[],totalTax=0;
+  for(var yr=1;yr<=years;yr++){
+    var aC=0,fC=0;
+    for(var m=0;m<12;m++){
+      if(aV<loft){var room=loft-aV,dep=Math.min(monthly,room);aV=aV*(1+mr)+dep;aC+=dep;var ov=monthly-dep;if(ov>0){fV=fV*(1+mr)+ov;fC+=ov;}}
+      else{aV=aV*(1+mr);fV=fV*(1+mr)+monthly;fC+=monthly;if(!loftHit)loftHit=yr;}
     }
-    aIn+=aC; fIn+=fC;
-    var ag=aV-aYS-aC; if(ag>0) aV-=ag*0.17; aYS=aV;
-    var fg=fV-fYS-fC+fCarry;
-    if (fg>0) { fCarry=0; fV-=Math.min(fg,61000)*0.27+Math.max(0,fg-61000)*0.42; }
-    else { fCarry=Math.abs(fg); }
-    fYS=fV;
-    var tv=aV+fV, ti=aIn+fIn;
-    rows.push({yr:yr,tv:Math.round(tv),ask:Math.round(aV),free:Math.round(fV),contrib:Math.round(ti),gain:Math.round(tv-ti)});
+    aIn+=aC;fIn+=fC;
+    var ag=aV-aYS-aC;var askTax=0;if(ag>0){askTax=ag*0.17;aV-=askTax;}aYS=aV;
+    var fg=fV-fYS-fC+fCarry;var freeTax=0;
+    if(fg>0){fCarry=0;freeTax=Math.min(fg,61000)*0.27+Math.max(0,fg-61000)*0.42;fV-=freeTax;}
+    else{fCarry=Math.abs(fg);}
+    fYS=fV;totalTax+=askTax+freeTax;
+    var tv=aV+fV,ti=aIn+fIn,annualReturn=tv-(rows.length>0?rows[rows.length-1].tv:start)-monthly*12;
+    rows.push({yr:yr,tv:Math.round(tv),ask:Math.round(aV),free:Math.round(fV),contrib:Math.round(ti),gain:Math.round(tv-ti),annReturn:annualReturn,totalTax:Math.round(totalTax)});
   }
-  return { rows:rows, loftHit:loftHit };
+  return{rows:rows,loftHit:loftHit};
 }
 
-// ── Update UI ─────────────────────────────────────────────
-function update() {
-  var start   = +document.getElementById('sl-start').value;
-  var monthly = +document.getElementById('sl-monthly').value;
-  var ret     = +document.getElementById('sl-return').value;
-  var loft    = loftMode==='500k' ? 500000 : 174200;
-
-  document.getElementById('v-start').textContent   = start.toLocaleString('da-DK')+' kr.';
-  document.getElementById('v-monthly').textContent = monthly.toLocaleString('da-DK')+' kr.';
-  document.getElementById('v-return').textContent  = ret+'%';
-
-  var res = simulate(start, monthly, ret/100, 20, loft);
-  var rows = res.rows, lh = res.loftHit;
-
-  var n = document.getElementById('notice');
-  if (lh) {
-    n.className = 'notice warn';
-    n.innerHTML = '<span>⚠️</span><span>ASK-loftet på <strong>'+fmtDKK(loft)+'</strong> nås i <strong>år '+lh+'</strong>. Herefter frie midler (27/42% skat).</span>';
-  } else {
-    n.className = 'notice ok';
-    n.innerHTML = '<span>✅</span><span>Alle indskud inden for ASK-loftet i hele 20 år. Kun 17% skat.</span>';
+// Bank simulation (no tax complexity, lagerbeskatning 17% on gains for simplicity)
+function simBank(start,monthly,rate,years){
+  var mr=Math.pow(1+rate,1/12)-1;
+  var v=start;
+  var rows=[];
+  var totalIn=start;
+  for(var yr=1;yr<=years;yr++){
+    var yStart=v;var contrib=0;
+    for(var m=0;m<12;m++){v=v*(1+mr)+monthly;contrib+=monthly;}
+    totalIn+=contrib;
+    // Bank interest is capital income, taxed ~37% in DK (not modeling exactly, just showing gross)
+    rows.push({yr:yr,tv:Math.round(v),contrib:Math.round(totalIn)});
   }
+  return rows;
+}
 
-  var c4 = document.getElementById('cards4');
-  c4.innerHTML = '';
-  [5,10,15,20].forEach(function(h) {
-    var d = rows[h-1];
-    var div = document.createElement('div');
-    div.className = 'c4';
-    div.innerHTML = '<div class="c4-yr">'+h+' år</div>'
-      +'<div class="c4-val">'+fmtDKK(d.tv)+'</div>'
-      +'<div class="c4-gain">+'+fmtDKK(d.gain)+'</div>'
-      +(d.free>0 ? '<div class="c4-free">fri: '+fmtDKK(d.free)+'</div>' : '');
+// ── Target calculator ─────────────────────────────────────
+function calcTargetMonthly(target,years,ret,loft){
+  // Binary search for monthly amount that reaches target after ASK tax
+  var lo=0,hi=target,best=hi;
+  for(var i=0;i<40;i++){
+    var mid=(lo+hi)/2;
+    var res=simulate(0,mid,ret,years,loft);
+    var final=res.rows[years-1].tv;
+    if(final>=target){best=mid;hi=mid;}
+    else lo=mid;
+  }
+  return Math.ceil(best/100)*100;
+}
+
+function updateTarget(){
+  var target=+document.getElementById('target-amount').value||3000000;
+  var years=Math.min(Math.max(+document.getElementById('target-years').value||20,1),40);
+  var ret=+document.getElementById('sl-return').value/100;
+  var loft=loftMode==='500k'?500000:174200;
+  document.getElementById('target-ret').textContent=document.getElementById('sl-return').value;
+  var monthly=calcTargetMonthly(target,years,ret,loft);
+  document.getElementById('target-monthly').textContent=monthly.toLocaleString('da-DK')+' kr./md.';
+  document.getElementById('target-sub').innerHTML='månedligt ved <span id="target-ret">'+Math.round(ret*100)+'</span>% afkast og 17% ASK-skat';
+}
+
+// ── Main update ───────────────────────────────────────────
+function update(){
+  var start=+document.getElementById('sl-start').value;
+  var monthly=+document.getElementById('sl-monthly').value;
+  var ret=+document.getElementById('sl-return').value;
+  var inflation=+document.getElementById('sl-inflation').value;
+  var bankRate=+document.getElementById('sl-bank').value;
+  var loft=loftMode==='500k'?500000:174200;
+
+  document.getElementById('v-start').textContent=start.toLocaleString('da-DK')+' kr.';
+  document.getElementById('v-monthly').textContent=monthly.toLocaleString('da-DK')+' kr.';
+  document.getElementById('v-return').textContent=ret+'%';
+  document.getElementById('v-inflation').textContent=inflation+'%';
+  document.getElementById('v-bank').textContent=bankRate+'%';
+
+  var res=simulate(start,monthly,ret/100,20,loft);
+  var rows=res.rows,lh=res.loftHit;
+  var bankRows=simBank(start,monthly,bankRate/100,20);
+
+  // Notice
+  var n=document.getElementById('notice');
+  if(lh){n.className='notice warn';n.innerHTML='<span>⚠️</span><span>ASK-loftet på <strong>'+fDKK(loft)+'</strong> nås i <strong>år '+lh+'</strong>. Herefter frie midler (27/42% skat).</span>';}
+  else{n.className='notice ok';n.innerHTML='<span>✅</span><span>Alle indskud inden for ASK-loftet i hele 20 år. Kun 17% skat.</span>';}
+
+  // Summary cards with real values
+  var c4=document.getElementById('cards4');c4.innerHTML='';
+  [5,10,15,20].forEach(function(h){
+    var d=rows[h-1];
+    var inflFactor=Math.pow(1+inflation/100,h);
+    var realVal=d.tv/inflFactor;
+    var div=document.createElement('div');div.className='c4';
+    div.innerHTML='<div class="c4-yr">'+h+' år</div>'
+      +'<div class="c4-val">'+fDKK(d.tv)+'</div>'
+      +'<div class="c4-gain">+'+fDKK(d.gain)+'</div>'
+      +(inflation>0?'<div class="c4-real">Realt: '+fDKK(realVal)+'</div>':'')
+      +(d.free>0?'<div class="c4-free">fri: '+fDKK(d.free)+'</div>':'');
     c4.appendChild(div);
   });
 
-  drawChart(rows, lh);
+  // Insights
+  var last=rows[19];
+  document.getElementById('ins-tax-val').textContent=fDKK(last.totalTax);
+  document.getElementById('ins-tax-sub').textContent=Math.round(last.totalTax/(last.gain+last.totalTax)*100)+'% af dit samlede afkast';
+
+  var breakEven=null;
+  for(var i=0;i<rows.length;i++){
+    if(rows[i].annReturn>=monthly*12){breakEven=rows[i].yr;break;}
+  }
+  document.getElementById('ins-break-val').textContent=breakEven?'År '+breakEven:'> 20 år';
+  document.getElementById('ins-break-sub').textContent=breakEven?'Herefter vokser formuen hurtigere end du indsætter':'Nås ikke inden for 20 år';
+
+  // Bank comparison
+  var bc=document.getElementById('bank-compare');
+  var etf20=rows[19].tv,bank20=bankRows[19].tv;
+  var maxV=Math.max(etf20,bank20);
+  function bar(label,val,color,textColor){
+    var pct=Math.round(val/maxV*100);
+    return '<div class="compare-row"><span class="compare-label">'+label+'</span><div class="compare-bar-wrap"><div class="compare-bar" style="width:'+pct+'%;background:'+color+'"></div></div><span class="compare-val" style="color:'+textColor+'">'+fDKK(val)+'</span></div>';
+  }
+  bc.innerHTML=bar('ETF (ASK)',etf20,'linear-gradient(90deg,#3b82f6,#06b6d4)','#38bdf8')+bar('Bank '+bankRate+'%',bank20,'linear-gradient(90deg,#f59e0b,#ea580c)','#fbbf24');
+  var diff=etf20-bank20;
+  bc.innerHTML+='<div style="font-size:11px;color:#64748b;text-align:center;margin-top:8px">ETF giver <span style="color:#4ade80;font-weight:700">'+fDKK(Math.abs(diff))+'</span> '+(diff>0?'mere':'mindre')+' efter 20 år</div>';
+
+  // Target
+  updateTarget();
+
+  // Chart
+  drawChart(rows,bankRows,lh);
 }
 
 // ── Chart ─────────────────────────────────────────────────
-function drawChart(rows, loftHit) {
-  var W=340,H=160,PL=38,PR=10,PT=8,PB=24;
-  var cW=W-PL-PR, cH=H-PT-PB;
+function drawChart(rows,bankRows,loftHit){
+  var W=340,H=180,PL=40,PR=10,PT=10,PB=24;
+  var cW=W-PL-PR,cH=H-PT-PB;
   var maxV=0;
-  rows.forEach(function(r){ if(r.tv>maxV) maxV=r.tv; });
+  rows.forEach(function(r){if(r.tv>maxV)maxV=r.tv;});
+  bankRows.forEach(function(r){if(r.tv>maxV)maxV=r.tv;});
   maxV*=1.08;
-  function px(yr){ return PL+(yr-1)/(rows.length-1)*cW; }
-  function py(v){ return PT+cH-(v/maxV)*cH; }
-  function path(vals){
-    return vals.map(function(v,i){ return (i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1); }).join(' ');
-  }
-  function area(vals){
-    var p=path(vals), bY=py(0).toFixed(1);
-    return p+' L'+px(vals.length).toFixed(1)+','+bY+' L'+px(1).toFixed(1)+','+bY+' Z';
-  }
+  function px(yr){return PL+(yr-1)/(rows.length-1)*cW;}
+  function py(v){return PT+cH-(v/maxV)*cH;}
+  function mkPath(vals){return vals.map(function(v,i){return(i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');}
+  function mkArea(vals){var p=mkPath(vals),bY=py(0).toFixed(1);return p+' L'+px(vals.length).toFixed(1)+','+bY+' L'+px(1).toFixed(1)+','+bY+' Z';}
   var contribs=rows.map(function(r){return r.contrib;});
   var asks=rows.map(function(r){return r.ask;});
   var totals=rows.map(function(r){return r.tv;});
+  var banks=bankRows.map(function(r){return r.tv;});
   var hasFree=rows.some(function(r){return r.free>0;});
-
   var svg='<defs>'
-    +'<linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#475569" stop-opacity=".25"/><stop offset="95%" stop-color="#475569" stop-opacity="0"/></linearGradient>'
+    +'<linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#475569" stop-opacity=".2"/><stop offset="95%" stop-color="#475569" stop-opacity="0"/></linearGradient>'
     +'<linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#3b82f6" stop-opacity=".4"/><stop offset="95%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient>'
     +'<linearGradient id="gF" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#a78bfa" stop-opacity=".4"/><stop offset="95%" stop-color="#a78bfa" stop-opacity="0"/></linearGradient>'
+    +'<linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#f59e0b" stop-opacity=".25"/><stop offset="95%" stop-color="#f59e0b" stop-opacity="0"/></linearGradient>'
     +'</defs>';
-
   [0,.25,.5,.75,1].forEach(function(f){
-    var v=maxV*f, y=py(v).toFixed(1);
+    var v=maxV*f,y=py(v).toFixed(1);
     svg+='<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="rgba(255,255,255,.04)" stroke-width="1"/>';
-    svg+='<text x="'+(PL-4)+'" y="'+(parseFloat(y)+3)+'" text-anchor="end" font-size="8" fill="#334155">'+fmtShort(v)+'</text>';
+    svg+='<text x="'+(PL-4)+'" y="'+(parseFloat(y)+3)+'" text-anchor="end" font-size="8" fill="#334155">'+fShort(v)+'</text>';
   });
   [1,5,10,15,20].forEach(function(yr){
     svg+='<text x="'+px(yr).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="8" fill="#334155">'+yr+'å</text>';
   });
-
-  svg+='<path d="'+area(contribs)+'" fill="url(#gC)"/>';
-  svg+='<path d="'+area(asks)+'" fill="url(#gA)"/>';
-  if (hasFree) {
+  svg+='<path d="'+mkArea(contribs)+'" fill="url(#gC)"/>';
+  svg+='<path d="'+mkArea(banks)+'" fill="url(#gB)"/>';
+  svg+='<path d="'+mkArea(asks)+'" fill="url(#gA)"/>';
+  if(hasFree){
     var pTop=totals.map(function(v,i){return(i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
     var pBot=asks.slice().reverse().map(function(v,i){return 'L'+px(rows.length-i).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
     svg+='<path d="'+pTop+' '+pBot+' Z" fill="url(#gF)"/>';
   }
-  svg+='<path d="'+path(contribs)+'" fill="none" stroke="#475569" stroke-width="1.2"/>';
-  svg+='<path d="'+path(asks)+'" fill="none" stroke="#3b82f6" stroke-width="2"/>';
-  if (hasFree) svg+='<path d="'+path(totals)+'" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4 2"/>';
-  if (loftHit && loftHit<=20) {
-    var lx=px(loftHit).toFixed(1);
-    svg+='<line x1="'+lx+'" y1="'+PT+'" x2="'+lx+'" y2="'+(H-PB)+'" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3 2"/>';
-  }
-  document.getElementById('chart').innerHTML = svg;
+  svg+='<path d="'+mkPath(contribs)+'" fill="none" stroke="#475569" stroke-width="1"/>';
+  svg+='<path d="'+mkPath(banks)+'" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2"/>';
+  svg+='<path d="'+mkPath(asks)+'" fill="none" stroke="#3b82f6" stroke-width="2"/>';
+  if(hasFree)svg+='<path d="'+mkPath(totals)+'" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3 2"/>';
+  if(loftHit&&loftHit<=20){var lx=px(loftHit).toFixed(1);svg+='<line x1="'+lx+'" y1="'+PT+'" x2="'+lx+'" y2="'+(H-PB)+'" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3 2"/>';}
+  document.getElementById('chart').innerHTML=svg;
 }
 
 // ── Init ──────────────────────────────────────────────────
+loadSettings();
 update();
 fetchETF();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
-  });
-}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
 </script>
 </body>
 </html>
