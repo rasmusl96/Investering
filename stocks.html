@@ -272,7 +272,7 @@ function render() {
   html += sbox('Udbytte',       divYld ? f2(divYld*100)+'%' : '–');
   html += sbox('Beta',          f1(beta));
   html += '</div>';
-  if(!fundData) html += '<div style="font-size:10px;color:#334155;margin-top:8px;text-align:center">P/E, markedsværdi og beta kræver Yahoo Finance-adgang – ikke tilgængelig i Safari privat browsing. AI-analysen kompenserer.</div>';
+  if(!fundData) html += '<div style="font-size:10px;color:#334155;margin-top:8px;text-align:center;line-height:1.5">💡 Yahoo Finance kræver login for P/E, markedsværdi og beta. <strong style="color:#a78bfa">Kør AI-analysen nedenfor</strong> – den giver dig alle disse tal plus en komplet vurdering.</div>';
   html += '</div>';
 
   // ── Price chart
