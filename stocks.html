@@ -151,9 +151,9 @@
   <!-- API Key + AI section (always visible after search) -->
   <div id="ai-section" style="display:none">
     <div class="ai-key-wrap">
-      <div class="stitle">🤖 AI Dybdeanalyse · Claude</div>
-      <p style="font-size:12px;color:#64748b">Giver en komplet fundamental + teknisk analyse med konkret køb/sælg-anbefaling og kursmål. Kræver Anthropic API-nøgle.</p>
-      <input class="ai-key-input" id="api-key-input" type="password" placeholder="sk-ant-api03-..." 
+      <div class="stitle">🤖 AI Dybdeanalyse · Gemini 2.5 Pro</div>
+      <p style="font-size:12px;color:#64748b">Giver en komplet fundamental + teknisk analyse med konkret køb/sælg-anbefaling og kursmål. Kræver OpenRouter API-nøgle (openrouter.ai).</p>
+      <input class="ai-key-input" id="api-key-input" type="password" placeholder="sk-or-v1-..." 
              value="" oninput="saveKey()"/>
       <p style="font-size:10px;color:#334155;margin-top:6px">🔒 Nøglen gemmes kun lokalt på din telefon. Aldrig sendt til andre end Anthropic.</p>
       <button class="ai-run-btn" id="ai-run-btn" onclick="runAIAnalysis()">
@@ -174,10 +174,10 @@ var currentFundamentals = null;
 
 // ── API Key ───────────────────────────────────────────────
 function saveKey(){
-  try{ localStorage.setItem('anthr_key', document.getElementById('api-key-input').value); }catch(e){}
+  try{ localStorage.setItem('or_key', document.getElementById('api-key-input').value); }catch(e){}
 }
 function loadKey(){
-  try{ var k=localStorage.getItem('anthr_key'); if(k) document.getElementById('api-key-input').value=k; }catch(e){}
+  try{ var k=localStorage.getItem('or_key'); if(k) document.getElementById('api-key-input').value=k; }catch(e){}
 }
 
 // ── Helpers ───────────────────────────────────────────────
@@ -627,16 +627,16 @@ Lav følgende analyse (vær konkret, specifik og brug tallene):
 
 Vær ærlig og balanceret – fremhæv både styrker og svagheder. Skriv i et klart dansk sprog der er forståeligt for en privat investor.`;
 
-  fetch('https://api.anthropic.com/v1/messages', {
+  fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
+      'Authorization': 'Bearer '+apiKey,
+      'HTTP-Referer': 'https://rasmusl96.github.io',
+      'X-Title': 'Aktieanalyse PWA'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'google/gemini-2.5-pro',
       max_tokens: 2000,
       messages: [{ role:'user', content: prompt }]
     })
@@ -646,7 +646,7 @@ Vær ærlig og balanceret – fremhæv både styrker og svagheder. Skriv i et kl
     btn.disabled = false;
     btn.innerHTML = '<span>🤖</span> Kør ny analyse';
     if(data.error){ document.getElementById('ai-result-container').innerHTML='<div class="loading-card" style="color:#f87171">⚠️ API fejl: '+data.error.message+'</div>'; return; }
-    var text = data.content && data.content[0] && data.content[0].text || '';
+    var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '';
     renderAIResult(text);
   })
   .catch(function(e){
@@ -659,7 +659,7 @@ Vær ærlig og balanceret – fremhæv både styrker og svagheder. Skriv i et kl
 function renderAIResult(text){
   // Parse sections
   var html = '<div class="ai-result">';
-  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><span style="font-size:20px">🤖</span><div><div style="font-size:14px;font-weight:700;color:#c4b5fd">AI Dybdeanalyse · '+currentTicker+'</div><div style="font-size:10px;color:#475569">Genereret af Claude · Ikke finansiel rådgivning</div></div></div>';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><span style="font-size:20px">🤖</span><div><div style="font-size:14px;font-weight:700;color:#c4b5fd">AI Dybdeanalyse · '+currentTicker+'</div><div style="font-size:10px;color:#475569">Genereret af Gemini 2.5 Pro via OpenRouter · Ikke finansiel rådgivning</div></div></div>';
 
   // Detect recommendation for colored box
   var recMatch = text.match(/ANBEFALING[:\s]*(STÆRKT KØB|KØB|HOLD|SÆLG|STÆRKT SÆLG)/i);
