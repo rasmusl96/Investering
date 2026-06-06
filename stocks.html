@@ -214,29 +214,21 @@ function searchStock(){
 }
 function loadTicker(ticker){
   currentTicker = ticker;
-  document.getElementById('ticker-input').value = ticker;
   currentQuote = null;
+  currentFundamentals = null;
+  document.getElementById('ticker-input').value = ticker;
   document.getElementById('main-content').innerHTML = '<div class="loading-card"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 12px"></div><br>Henter data for '+ticker+'...</div>';
   document.getElementById('ai-section').style.display = 'none';
 
-  // Fetch price data + fundamentals in parallel
   var priceUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?interval=1d&range=1y';
-  var fundUrl  = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=financialData,defaultKeyStatistics,summaryProfile,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend,summaryDetail';
 
-  // Try v7 quote endpoint (most fields) with v6 as backup
-  // Multiple Yahoo endpoints to try for fundamental stats
-  var endpoints = [
-    'https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=price,summaryDetail,defaultKeyStatistics',
-    'https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=price,summaryDetail,defaultKeyStatistics',
-    'https://query1.finance.yahoo.com/v7/finance/quote?symbols='+ticker,
-    'https://query2.finance.yahoo.com/v7/finance/quote?symbols='+ticker,
-  ];
-
-  proxyFetch(priceUrl)
+  // Step 1: Fetch price data and show chart immediately
+  proxyFetch(priceUrl, 10000)
     .then(function(priceData){
       currentData = priceData;
-      // Try all fundamental endpoints, use first that returns valid data
-      tryFundamentals(endpoints, 0);
+      renderAll(); // Show chart NOW with what we have
+      // Step 2: Fetch fundamentals in background - update stats when ready
+      fetchFundamentalsBackground(ticker);
     })
     .catch(function(){
       document.getElementById('main-content').innerHTML='<div class="loading-card">⚠️ Kunne ikke hente kursdata for <strong>'+ticker+'</strong>.<br><br>Tjek at tickeren er korrekt (f.eks. NOVO-B.CO, AAPL, MSFT)</div>';
@@ -244,49 +236,60 @@ function loadTicker(ticker){
 }
 
 // ── Fetch fundamentals with fallback chain ───────────────
-function tryFundamentals(endpoints, i) {
-  if(i >= endpoints.length){ renderAll(); return; }
-  var ctrl = new AbortController();
-  var t = setTimeout(function(){ ctrl.abort(); }, 7000);
-  var proxies = [
-    endpoints[i],
-    'https://corsproxy.io/?url='+encodeURIComponent(endpoints[i]),
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(endpoints[i]),
-    'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(endpoints[i]),
+function fetchFundamentalsBackground(ticker) {
+  // Show loading indicator in stats boxes
+  ['markedsvaerdi-box','pe-box','udbytte-box','beta-box'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.innerHTML = '<div class="stat-lbl">'+el.querySelector('.stat-lbl').textContent+'</div><div class="stat-val" style="font-size:10px;color:#334155">henter...</div>';
+  });
+
+  var urls = [
+    'https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=price,summaryDetail,defaultKeyStatistics,financialData,summaryProfile,incomeStatementHistory,balanceSheetHistory',
+    'https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=price,summaryDetail,defaultKeyStatistics,financialData,summaryProfile,incomeStatementHistory,balanceSheetHistory',
+    'https://query1.finance.yahoo.com/v7/finance/quote?symbols='+ticker,
+    'https://query2.finance.yahoo.com/v7/finance/quote?symbols='+ticker,
   ];
-  function tryProxy(pi) {
-    if(pi >= proxies.length){ clearTimeout(t); tryFundamentals(endpoints, i+1); return; }
-    fetch(proxies[pi], {signal: ctrl.signal})
-      .then(function(r){ return r.json(); })
-      .then(function(data){
-        clearTimeout(t);
-        // Check if we got valid data
-        var valid = false;
-        if(data.quoteSummary && data.quoteSummary.result && data.quoteSummary.result[0]){
-          currentFundamentals = data;
-          // Also extract quote-like data from price module
-          var price = data.quoteSummary.result[0].price;
-          if(price) {
-            currentQuote = { quoteResponse: { result: [price] } };
-            // Map price module fields to v7 field names
-            var r = currentQuote.quoteResponse.result[0];
-            r.marketCap = price.marketCap && price.marketCap.raw;
-            r.trailingPE = price.trailingPE && price.trailingPE.raw;
-            r.beta = (data.quoteSummary.result[0].defaultKeyStatistics && data.quoteSummary.result[0].defaultKeyStatistics.beta && data.quoteSummary.result[0].defaultKeyStatistics.beta.raw) ||
-                     (data.quoteSummary.result[0].summaryDetail && data.quoteSummary.result[0].summaryDetail.beta && data.quoteSummary.result[0].summaryDetail.beta.raw);
-            r.trailingAnnualDividendYield = data.quoteSummary.result[0].summaryDetail && data.quoteSummary.result[0].summaryDetail.dividendYield && data.quoteSummary.result[0].summaryDetail.dividendYield.raw;
+
+  function tryUrl(ui) {
+    if(ui >= urls.length) return; // Give up silently
+    var proxies = [
+      urls[ui],
+      'https://corsproxy.io/?url='+encodeURIComponent(urls[ui]),
+      'https://api.allorigins.win/raw?url='+encodeURIComponent(urls[ui]),
+      'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(urls[ui]),
+    ];
+    function tryP(pi) {
+      if(pi >= proxies.length){ tryUrl(ui+1); return; }
+      var ctrl = new AbortController();
+      var t = setTimeout(function(){ ctrl.abort(); tryP(pi+1); }, 5000);
+      fetch(proxies[pi], {signal: ctrl.signal})
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          clearTimeout(t);
+          var valid = false;
+          if(data.quoteSummary && data.quoteSummary.result && data.quoteSummary.result[0]){
+            currentFundamentals = data;
+            var res = data.quoteSummary.result[0];
+            var price = res.price || {};
+            currentQuote = { quoteResponse: { result: [{
+              marketCap: price.marketCap && price.marketCap.raw,
+              trailingPE: price.trailingPE && price.trailingPE.raw,
+              beta: (res.defaultKeyStatistics && res.defaultKeyStatistics.beta && res.defaultKeyStatistics.beta.raw) ||
+                    (res.summaryDetail && res.summaryDetail.beta && res.summaryDetail.beta.raw),
+              trailingAnnualDividendYield: res.summaryDetail && res.summaryDetail.dividendYield && res.summaryDetail.dividendYield.raw
+            }]}};
+            valid = true;
+          } else if(data.quoteResponse && data.quoteResponse.result && data.quoteResponse.result.length){
+            currentQuote = data;
+            valid = true;
           }
-          valid = true;
-        } else if(data.quoteResponse && data.quoteResponse.result && data.quoteResponse.result.length) {
-          currentQuote = data;
-          valid = true;
-        }
-        if(valid){ renderAll(); }
-        else{ tryProxy(pi+1); }
-      })
-      .catch(function(){ tryProxy(pi+1); });
+          if(valid){ renderAll(); } else { tryP(pi+1); }
+        })
+        .catch(function(){ clearTimeout(t); });
+    }
+    tryP(0);
   }
-  tryProxy(0);
+  tryUrl(0);
 }
 
 // ── Render everything ─────────────────────────────────────
