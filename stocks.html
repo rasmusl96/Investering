@@ -171,6 +171,7 @@
 var currentTicker = '';
 var currentData = null;
 var currentFundamentals = null;
+var currentQuote = null;
 
 // ── API Key ───────────────────────────────────────────────
 function saveKey(){
@@ -214,6 +215,7 @@ function searchStock(){
 function loadTicker(ticker){
   currentTicker = ticker;
   document.getElementById('ticker-input').value = ticker;
+  currentQuote = null;
   document.getElementById('main-content').innerHTML = '<div class="loading-card"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 12px"></div><br>Henter data for '+ticker+'...</div>';
   document.getElementById('ai-section').style.display = 'none';
 
@@ -221,17 +223,22 @@ function loadTicker(ticker){
   var priceUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?interval=1d&range=1y';
   var fundUrl  = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=financialData,defaultKeyStatistics,summaryProfile,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend,summaryDetail';
 
-  Promise.all([proxyFetch(priceUrl), proxyFetch(fundUrl)])
-    .then(function(results){
-      currentData = results[0];
-      currentFundamentals = results[1];
-      renderAll();
+  var quoteUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols='+ticker;
+
+  // Fetch all three in parallel, fail gracefully
+  proxyFetch(priceUrl)
+    .then(function(priceData){
+      currentData = priceData;
+      // Try quote + fundamentals in parallel but don't block on them
+      Promise.allSettled([proxyFetch(quoteUrl, 6000), proxyFetch(fundUrl, 8000)])
+        .then(function(results){
+          currentQuote = results[0].status==='fulfilled' ? results[0].value : null;
+          currentFundamentals = results[1].status==='fulfilled' ? results[1].value : null;
+          renderAll();
+        });
     })
-    .catch(function(e){
-      // Try price only
-      proxyFetch(priceUrl)
-        .then(function(d){ currentData=d; currentFundamentals=null; renderAll(); })
-        .catch(function(){ document.getElementById('main-content').innerHTML='<div class="loading-card">⚠️ Kunne ikke hente data for <strong>'+ticker+'</strong>.<br><br>Tjek at tickeren er korrekt (f.eks. NOVO-B.CO, AAPL, MSFT)</div>'; });
+    .catch(function(){
+      document.getElementById('main-content').innerHTML='<div class="loading-card">⚠️ Kunne ikke hente kursdata for <strong>'+ticker+'</strong>.<br><br>Tjek at tickeren er korrekt (f.eks. NOVO-B.CO, AAPL, MSFT)</div>';
     });
 }
 
@@ -269,13 +276,24 @@ function renderAll(){
   var fd = fund && fund.financialData;
   var ks = fund && fund.defaultKeyStatistics;
   var sd = fund && fund.summaryDetail;
+  // v7 quote data - more reliable for quick stats
+  var q = currentQuote && currentQuote.quoteResponse && currentQuote.quoteResponse.result && currentQuote.quoteResponse.result[0];
+  // Calculate 52wk high/low directly from chart data
+  var validCloses = closes.filter(Boolean);
+  var wk52High = Math.max.apply(null, validCloses);
+  var wk52Low  = Math.min.apply(null, validCloses);
+  // Get market cap, P/E, beta, dividend from quote or summaryDetail
+  var marketCap   = (q&&q.marketCap)         || (sd&&sd.marketCap&&sd.marketCap.raw);
+  var trailingPE  = (q&&q.trailingPE)        || (sd&&sd.trailingPE&&sd.trailingPE.raw);
+  var dividendYld = (q&&q.trailingAnnualDividendYield) || (sd&&sd.dividendYield&&sd.dividendYield.raw);
+  var beta        = (q&&q.beta)              || (sd&&sd.beta&&sd.beta.raw) || (ks&&ks.beta&&ks.beta.raw);
   html += '<div class="stats-grid">';
-  html += stat('52-ugers høj', fmt(sd&&sd.fiftyTwoWeekHigh&&sd.fiftyTwoWeekHigh.raw,2)||fmt(meta.fiftyTwoWeekHigh,2));
-  html += stat('52-ugers lav', fmt(sd&&sd.fiftyTwoWeekLow&&sd.fiftyTwoWeekLow.raw,2)||fmt(meta.fiftyTwoWeekLow,2));
-  html += stat('Markedsværdi', fmtBig(sd&&sd.marketCap&&sd.marketCap.raw));
-  html += stat('P/E', fmt(sd&&sd.trailingPE&&sd.trailingPE.raw,1)||fmt(ks&&ks.trailingEps&&ks.trailingEps.raw,2));
-  html += stat('Udbytte', sd&&sd.dividendYield&&sd.dividendYield.raw ? fmt(sd.dividendYield.raw*100,2)+'%' : '–');
-  html += stat('Beta', fmt(sd&&sd.beta&&sd.beta.raw,2)||fmt(ks&&ks.beta&&ks.beta.raw,2));
+  html += stat('52-ugers høj', fmt(wk52High,2));
+  html += stat('52-ugers lav', fmt(wk52Low,2));
+  html += stat('Markedsværdi', fmtBig(marketCap));
+  html += stat('P/E', fmt(trailingPE,1));
+  html += stat('Udbytte', dividendYld ? fmt(dividendYld*100,2)+'%' : '–');
+  html += stat('Beta', fmt(beta,2));
   html += '</div></div>';
 
   // ── Technical charts
@@ -288,7 +306,7 @@ function renderAll(){
   html += renderSignals(indicators, currentPrice, closes);
 
   // ── Fundamentals
-  if(fund) html += renderFundamentals(fund, currency);
+  if(fund) html += renderFundamentals(fund, q, currency);
 
   // ── Earnings history
   if(fund && fund.incomeStatementHistory) html += renderEarnings(fund.incomeStatementHistory);
@@ -475,11 +493,12 @@ function renderSignals(ind, price, closes){
 }
 
 // ── Fundamentals ──────────────────────────────────────────
-function renderFundamentals(fund, currency){
+function renderFundamentals(fund, q, currency){
   var fd = fund.financialData || {};
   var ks = fund.defaultKeyStatistics || {};
   var sd = fund.summaryDetail || {};
   var sp = fund.summaryProfile || {};
+  q = q || {};
 
   function r(lbl,val){ return '<tr><td>'+lbl+'</td><td>'+(val||'–')+'</td></tr>'; }
 
