@@ -203,36 +203,17 @@ function load(t) {
 
 // ── Load fundamentals in background ──────────────────────
 function loadFundamentals(t) {
-  var urls = [
-    'https://query1.finance.yahoo.com/v10/finance/quoteSummary/' + t + '?modules=price,summaryDetail,defaultKeyStatistics,financialData,summaryProfile,incomeStatementHistory,balanceSheetHistory',
-    'https://query2.finance.yahoo.com/v10/finance/quoteSummary/' + t + '?modules=price,summaryDetail,defaultKeyStatistics,financialData,summaryProfile,incomeStatementHistory,balanceSheetHistory',
-    'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + t,
-    'https://query2.finance.yahoo.com/v7/finance/quote?symbols=' + t,
-  ];
-  function tryUrl(i) {
-    if(i >= urls.length) return;
-    fetchProxy(urls[i])
-      .then(function(data) {
-        var ok = false;
-        if(data.quoteSummary && data.quoteSummary.result && data.quoteSummary.result[0]) {
-          fundData = data.quoteSummary.result[0];
-          ok = true;
-        } else if(data.quoteResponse && data.quoteResponse.result && data.quoteResponse.result[0]) {
-          // Map v7 quote to expected structure
-          var q = data.quoteResponse.result[0];
-          fundData = {
-            _v7: true,
-            summaryDetail: { marketCap:{raw:q.marketCap}, trailingPE:{raw:q.trailingPE}, beta:{raw:q.beta}, dividendYield:{raw:q.trailingAnnualDividendYield}, fiftyTwoWeekHigh:{raw:q.fiftyTwoWeekHigh}, fiftyTwoWeekLow:{raw:q.fiftyTwoWeekLow} },
-            financialData: { targetMeanPrice:{raw:q.targetMeanPrice}, recommendationKey: q.averageAnalystRating },
-          };
-          ok = true;
-        }
-        if(ok) { render(); }
-        else { tryUrl(i+1); }
-      })
-      .catch(function() { tryUrl(i+1); });
-  }
-  tryUrl(0);
+  // Try quoteSummary – works in regular Safari/Chrome, may fail in private browsing
+  var url = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/' + t +
+    '?modules=price,summaryDetail,defaultKeyStatistics,financialData,summaryProfile,incomeStatementHistory,balanceSheetHistory';
+  fetchProxy(url)
+    .then(function(data) {
+      if(data.quoteSummary && data.quoteSummary.result && data.quoteSummary.result[0]) {
+        fundData = data.quoteSummary.result[0];
+        render();
+      }
+    })
+    .catch(function() { /* Silent fail – chart still shows */ });
 }
 
 // ── Render ────────────────────────────────────────────────
@@ -286,11 +267,13 @@ function render() {
   html += '<div class="stats-grid">';
   html += sbox('52-ugers høj',  f2(hi52));
   html += sbox('52-ugers lav',  f2(lo52));
-  html += sbox('Markedsværdi',  fBig(marketCap) + (fundData?'':' ⏳'));
-  html += sbox('P/E',           f1(pe) + (fundData?'':' ⏳'));
-  html += sbox('Udbytte',       divYld ? f2(divYld*100)+'%' : (fundData?'–':' ⏳'));
-  html += sbox('Beta',          f1(beta) + (fundData?'':' ⏳'));
-  html += '</div></div>';
+  html += sbox('Markedsværdi',  fBig(marketCap));
+  html += sbox('P/E',           f1(pe));
+  html += sbox('Udbytte',       divYld ? f2(divYld*100)+'%' : '–');
+  html += sbox('Beta',          f1(beta));
+  html += '</div>';
+  if(!fundData) html += '<div style="font-size:10px;color:#334155;margin-top:8px;text-align:center">P/E, markedsværdi og beta kræver Yahoo Finance-adgang – ikke tilgængelig i Safari privat browsing. AI-analysen kompenserer.</div>';
+  html += '</div>';
 
   // ── Price chart
   html += renderChart(closes, timestamps, ind);
