@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Aktieanalyse</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#070b12"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Aktieanalyse"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;background:#070b12;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent}
+    .wrap{padding:max(env(safe-area-inset-top),16px) 16px 48px}
+    /* Header */
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .header-left h1{font-size:20px;font-weight:700;color:#f1f5f9}
+    .header-left p{font-size:11px;color:#475569;margin-top:2px}
+    .back-btn{color:#3b82f6;font-size:13px;font-weight:600;text-decoration:none}
+    /* Search */
+    .search-wrap{position:relative;margin-bottom:12px}
+    .search-input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:13px 16px 13px 42px;color:#f1f5f9;font-size:16px;outline:none;-webkit-appearance:none}
+    .search-input::placeholder{color:#334155}
+    .search-input:focus{border-color:#3b82f6}
+    .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+    .search-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:linear-gradient(135deg,#1d4ed8,#0891b2);border:none;border-radius:10px;padding:7px 14px;color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+    /* Quick tickers */
+    .quick-tickers{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none}
+    .quick-tickers::-webkit-scrollbar{display:none}
+    .qt{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;color:#94a3b8;cursor:pointer;white-space:nowrap;flex-shrink:0}
+    .qt:active{background:rgba(59,130,246,.15);border-color:#3b82f6;color:#60a5fa}
+    /* Cards */
+    .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px;margin-bottom:12px}
+    .card-accent{border-radius:14px;padding:14px;margin-bottom:12px;position:relative;overflow:hidden}
+    .card-accent::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .stitle{font-size:10px;color:#475569;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
+    /* Stats */
+    .stock-header{margin-bottom:14px}
+    .stock-name{font-size:20px;font-weight:700;color:#f1f5f9;margin-bottom:2px}
+    .stock-ticker{font-size:12px;color:#64748b;margin-bottom:10px}
+    .stock-price{font-family:ui-monospace,monospace;font-size:32px;font-weight:700;color:#f1f5f9}
+    .stock-change{font-size:14px;font-weight:600;border-radius:8px;padding:3px 9px;margin-left:8px}
+    .pos-bg{background:rgba(34,197,94,.15);color:#4ade80}
+    .neg-bg{background:rgba(239,68,68,.15);color:#f87171}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+    .stat-box{background:rgba(255,255,255,.03);border-radius:10px;padding:9px 8px;text-align:center}
+    .stat-lbl{font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+    .stat-val{font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:#f1f5f9}
+    /* Charts */
+    svg.chart{width:100%;display:block}
+    .chart-legend{display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
+    .leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#64748b}
+    .leg-dot{width:20px;height:3px;border-radius:2px;display:inline-block}
+    /* Signals */
+    .signals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+    .signal-box{border-radius:12px;padding:11px;text-align:center}
+    .signal-buy{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25)}
+    .signal-sell{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25)}
+    .signal-neutral{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2)}
+    .signal-icon{font-size:22px;margin-bottom:4px}
+    .signal-name{font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+    .signal-val{font-size:13px;font-weight:700}
+    /* Fundamentals table */
+    .fund-table{width:100%;border-collapse:collapse}
+    .fund-table tr{border-bottom:1px solid rgba(255,255,255,.04)}
+    .fund-table td{padding:8px 4px;font-size:12px}
+    .fund-table td:first-child{color:#64748b;width:55%}
+    .fund-table td:last-child{font-family:ui-monospace,monospace;font-weight:600;text-align:right;color:#f1f5f9}
+    /* AI section */
+    .ai-key-wrap{background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:14px;padding:14px;margin-bottom:12px}
+    .ai-key-input{width:100%;background:rgba(0,0,0,.3);border:1px solid rgba(167,139,250,.3);border-radius:10px;padding:10px 12px;color:#f1f5f9;font-family:ui-monospace,monospace;font-size:13px;outline:none;margin-top:8px}
+    .ai-key-input:focus{border-color:#a78bfa}
+    .ai-run-btn{width:100%;background:linear-gradient(135deg,#7c3aed,#1d4ed8);border:none;border-radius:12px;padding:14px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px}
+    .ai-run-btn:disabled{opacity:.5;cursor:not-allowed}
+    /* AI result */
+    .ai-result{background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:14px;padding:16px;margin-bottom:12px}
+    .ai-result h3{font-size:14px;font-weight:700;color:#c4b5fd;margin:14px 0 6px}
+    .ai-result h3:first-child{margin-top:0}
+    .ai-result p{font-size:13px;color:#cbd5e1;line-height:1.6;margin-bottom:8px}
+    .ai-result ul{font-size:13px;color:#cbd5e1;line-height:1.6;padding-left:18px;margin-bottom:8px}
+    .ai-result li{margin-bottom:4px}
+    .rec-box{border-radius:12px;padding:14px;margin:10px 0;text-align:center}
+    .rec-buy{background:rgba(34,197,94,.12);border:2px solid rgba(34,197,94,.4)}
+    .rec-sell{background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.4)}
+    .rec-hold{background:rgba(251,191,36,.1);border:2px solid rgba(251,191,36,.3)}
+    .rec-label{font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px}
+    .rec-value{font-size:28px;font-weight:800;margin-bottom:4px}
+    .rec-sub{font-size:12px;color:#94a3b8}
+    /* Loading */
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-card{text-align:center;padding:32px;color:#475569;font-size:13px}
+    .empty-state{text-align:center;padding:48px 16px;color:#334155}
+    .empty-icon{font-size:48px;margin-bottom:12px}
+    .empty-title{font-size:16px;font-weight:600;color:#475569;margin-bottom:6px}
+    .empty-sub{font-size:12px;color:#334155}
+    /* Disclaimer */
+    .disclaimer{font-size:10px;color:#1e293b;text-align:center;padding:8px;line-height:1.5}
+    /* Earnings bar chart */
+    .earnings-bars{display:flex;align-items:flex-end;gap:4px;height:80px;margin-top:8px}
+    .e-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+    .e-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px}
+    .e-bar-lbl{font-size:8px;color:#475569;text-align:center}
+    .e-bar-val{font-size:8px;color:#94a3b8;text-align:center;font-family:ui-monospace,monospace}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="header-left">
+      <h1>📊 Aktieanalyse</h1>
+      <p>Teknisk · Fundamental · AI-analyse</p>
+    </div>
+    <a href="index.html" class="back-btn">← Beregner</a>
+  </div>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="ticker-input" placeholder="Ticker: AAPL, NOVO.CO, NVDA..." 
+           onkeydown="if(event.key==='Enter')searchStock()"/>
+    <button class="search-btn" onclick="searchStock()">Søg</button>
+  </div>
+
+  <!-- Quick tickers -->
+  <div class="quick-tickers">
+    <span class="qt" onclick="loadTicker('IWDA.AS')">🌍 IWDA</span>
+    <span class="qt" onclick="loadTicker('NOVO-B.CO')">💊 Novo</span>
+    <span class="qt" onclick="loadTicker('DSV.CO')">📦 DSV</span>
+    <span class="qt" onclick="loadTicker('MAERSK-B.CO')">🚢 Mærsk</span>
+    <span class="qt" onclick="loadTicker('NVDA')">🤖 Nvidia</span>
+    <span class="qt" onclick="loadTicker('AAPL')">🍎 Apple</span>
+    <span class="qt" onclick="loadTicker('MSFT')">🪟 Microsoft</span>
+    <span class="qt" onclick="loadTicker('AMZN')">📦 Amazon</span>
+    <span class="qt" onclick="loadTicker('TSLA')">⚡ Tesla</span>
+    <span class="qt" onclick="loadTicker('META')">👤 Meta</span>
+    <span class="qt" onclick="loadTicker('GOOGL')">🔍 Google</span>
+  </div>
+
+  <!-- Main content -->
+  <div id="main-content">
+    <div class="empty-state">
+      <div class="empty-icon">📈</div>
+      <div class="empty-title">Søg på en aktie</div>
+      <div class="empty-sub">Indtast en ticker eller vælg en af genvejene ovenfor</div>
+    </div>
+  </div>
+
+  <!-- API Key + AI section (always visible after search) -->
+  <div id="ai-section" style="display:none">
+    <div class="ai-key-wrap">
+      <div class="stitle">🤖 AI Dybdeanalyse · Claude</div>
+      <p style="font-size:12px;color:#64748b">Giver en komplet fundamental + teknisk analyse med konkret køb/sælg-anbefaling og kursmål. Kræver Anthropic API-nøgle.</p>
+      <input class="ai-key-input" id="api-key-input" type="password" placeholder="sk-ant-api03-..." 
+             value="" oninput="saveKey()"/>
+      <p style="font-size:10px;color:#334155;margin-top:6px">🔒 Nøglen gemmes kun lokalt på din telefon. Aldrig sendt til andre end Anthropic.</p>
+      <button class="ai-run-btn" id="ai-run-btn" onclick="runAIAnalysis()">
+        <span>🤖</span> Kør dybdeanalyse
+      </button>
+    </div>
+    <div id="ai-result-container"></div>
+  </div>
+
+  <div class="disclaimer">⚠️ Ikke finansiel rådgivning. Historiske data og AI-analyser er vejledende – invester aldrig mere end du kan tåle at tabe.<br>© Rasmus Lund Larsen 2026</div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────
+var currentTicker = '';
+var currentData = null;
+var currentFundamentals = null;
+
+// ── API Key ───────────────────────────────────────────────
+function saveKey(){
+  try{ localStorage.setItem('anthr_key', document.getElementById('api-key-input').value); }catch(e){}
+}
+function loadKey(){
+  try{ var k=localStorage.getItem('anthr_key'); if(k) document.getElementById('api-key-input').value=k; }catch(e){}
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function fmt(v,dec){ if(v==null||isNaN(v)) return '–'; return (+v).toFixed(dec||0).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+function fmtBig(v){ if(v==null||isNaN(v)) return '–'; if(Math.abs(v)>=1e12) return (v/1e12).toFixed(2)+' T'; if(Math.abs(v)>=1e9) return (v/1e9).toFixed(2)+' mia.'; if(Math.abs(v)>=1e6) return (v/1e6).toFixed(1)+' mio.'; return Math.round(v).toLocaleString(); }
+function pctFmt(v){ if(v==null||isNaN(v)) return '–'; return (v>0?'+':'')+( v*100).toFixed(1)+'%'; }
+
+// ── CORS proxy cascade ────────────────────────────────────
+function proxyFetch(url, timeout){
+  timeout = timeout || 8000;
+  var proxies = [
+    url,
+    'https://corsproxy.io/?url='+encodeURIComponent(url),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(url),
+    'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url),
+  ];
+  function tryNext(i){
+    if(i>=proxies.length) return Promise.reject(new Error('All proxies failed'));
+    var ctrl=new AbortController();
+    var t=setTimeout(function(){ctrl.abort();},timeout);
+    return fetch(proxies[i],{signal:ctrl.signal})
+      .then(function(r){ clearTimeout(t); return r.json(); })
+      .catch(function(){ clearTimeout(t); return tryNext(i+1); });
+  }
+  return tryNext(0);
+}
+
+// ── Search ────────────────────────────────────────────────
+function searchStock(){
+  var t = document.getElementById('ticker-input').value.trim().toUpperCase();
+  if(!t) return;
+  loadTicker(t);
+}
+function loadTicker(ticker){
+  currentTicker = ticker;
+  document.getElementById('ticker-input').value = ticker;
+  document.getElementById('main-content').innerHTML = '<div class="loading-card"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto 12px"></div><br>Henter data for '+ticker+'...</div>';
+  document.getElementById('ai-section').style.display = 'none';
+
+  // Fetch price data + fundamentals in parallel
+  var priceUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?interval=1d&range=1y';
+  var fundUrl  = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=financialData,defaultKeyStatistics,summaryProfile,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend,summaryDetail';
+
+  Promise.all([proxyFetch(priceUrl), proxyFetch(fundUrl)])
+    .then(function(results){
+      currentData = results[0];
+      currentFundamentals = results[1];
+      renderAll();
+    })
+    .catch(function(e){
+      // Try price only
+      proxyFetch(priceUrl)
+        .then(function(d){ currentData=d; currentFundamentals=null; renderAll(); })
+        .catch(function(){ document.getElementById('main-content').innerHTML='<div class="loading-card">⚠️ Kunne ikke hente data for <strong>'+ticker+'</strong>.<br><br>Tjek at tickeren er korrekt (f.eks. NOVO-B.CO, AAPL, MSFT)</div>'; });
+    });
+}
+
+// ── Render everything ─────────────────────────────────────
+function renderAll(){
+  var html = '';
+  var chart = currentData && currentData.chart && currentData.chart.result && currentData.chart.result[0];
+  var fund  = currentFundamentals && currentFundamentals.quoteSummary && currentFundamentals.quoteSummary.result && currentFundamentals.quoteSummary.result[0];
+
+  if(!chart){ document.getElementById('main-content').innerHTML='<div class="loading-card">⚠️ Ingen kursdata tilgængelig</div>'; return; }
+
+  var meta = chart.meta;
+  var closes = chart.indicators.quote[0].close.filter(Boolean);
+  var highs  = chart.indicators.quote[0].high;
+  var lows   = chart.indicators.quote[0].low;
+  var volumes= chart.indicators.quote[0].volume;
+  var timestamps = chart.timestamp;
+  var currentPrice = meta.regularMarketPrice;
+  var prevClose    = meta.chartPreviousClose || meta.previousClose || closes[closes.length-2];
+  var dayChange    = currentPrice - prevClose;
+  var dayChangePct = dayChange / prevClose * 100;
+
+  // ── Stock header
+  var name = (fund && fund.summaryProfile && fund.summaryProfile.longName) || meta.symbol;
+  var currency = meta.currency || '';
+  html += '<div class="card" style="border-color:rgba(59,130,246,.2)">';
+  html += '<div class="stock-name">'+name+'</div>';
+  html += '<div class="stock-ticker">'+currentTicker+' · '+currency+'</div>';
+  html += '<div style="display:flex;align-items:baseline;gap:0">';
+  html += '<span class="stock-price">'+fmt(currentPrice,2)+'</span>';
+  html += '<span class="stock-change '+(dayChange>=0?'pos-bg':'neg-bg')+'">'+(dayChange>=0?'+':'')+fmt(dayChange,2)+' ('+(dayChange>=0?'+':'')+fmt(dayChangePct,2)+'%)</span>';
+  html += '</div>';
+
+  // Stats grid
+  var fd = fund && fund.financialData;
+  var ks = fund && fund.defaultKeyStatistics;
+  var sd = fund && fund.summaryDetail;
+  html += '<div class="stats-grid">';
+  html += stat('52-ugers høj', fmt(sd&&sd.fiftyTwoWeekHigh&&sd.fiftyTwoWeekHigh.raw,2)||fmt(meta.fiftyTwoWeekHigh,2));
+  html += stat('52-ugers lav', fmt(sd&&sd.fiftyTwoWeekLow&&sd.fiftyTwoWeekLow.raw,2)||fmt(meta.fiftyTwoWeekLow,2));
+  html += stat('Markedsværdi', fmtBig(sd&&sd.marketCap&&sd.marketCap.raw));
+  html += stat('P/E', fmt(sd&&sd.trailingPE&&sd.trailingPE.raw,1)||fmt(ks&&ks.trailingEps&&ks.trailingEps.raw,2));
+  html += stat('Udbytte', sd&&sd.dividendYield&&sd.dividendYield.raw ? fmt(sd.dividendYield.raw*100,2)+'%' : '–');
+  html += stat('Beta', fmt(sd&&sd.beta&&sd.beta.raw,2)||fmt(ks&&ks.beta&&ks.beta.raw,2));
+  html += '</div></div>';
+
+  // ── Technical charts
+  var indicators = calcIndicators(closes);
+  html += renderPriceChart(closes, timestamps, indicators);
+  html += renderRSIChart(indicators.rsi, timestamps);
+  html += renderMACDChart(indicators, timestamps);
+
+  // ── Technical signals
+  html += renderSignals(indicators, currentPrice, closes);
+
+  // ── Fundamentals
+  if(fund) html += renderFundamentals(fund, currency);
+
+  // ── Earnings history
+  if(fund && fund.incomeStatementHistory) html += renderEarnings(fund.incomeStatementHistory);
+
+  document.getElementById('main-content').innerHTML = html;
+  document.getElementById('ai-section').style.display = 'block';
+  loadKey();
+}
+
+function stat(lbl,val){
+  return '<div class="stat-box"><div class="stat-lbl">'+lbl+'</div><div class="stat-val">'+(val||'–')+'</div></div>';
+}
+
+// ── Technical indicator calculations ─────────────────────
+function calcIndicators(closes){
+  // MA
+  function ma(arr,n){ return arr.map(function(_,i){ if(i<n-1) return null; var s=0; for(var j=i-n+1;j<=i;j++) s+=arr[j]; return s/n; }); }
+  var ma20  = ma(closes,20);
+  var ma50  = ma(closes,50);
+  var ma200 = ma(closes,200);
+
+  // RSI(14)
+  var rsi = closes.map(function(_,i){
+    if(i<14) return null;
+    var gains=0,losses=0;
+    for(var j=i-13;j<=i;j++){var d=closes[j]-closes[j-1];if(d>0)gains+=d;else losses-=d;}
+    var rs=(gains/14)/(losses/14||0.001);
+    return 100-100/(1+rs);
+  });
+
+  // MACD(12,26,9)
+  function ema(arr,n){
+    var result=[]; var k=2/(n+1);
+    arr.forEach(function(v,i){
+      if(i===0){ result.push(v); return; }
+      result.push(v*k+result[i-1]*(1-k));
+    });
+    return result;
+  }
+  var ema12 = ema(closes,12);
+  var ema26 = ema(closes,26);
+  var macdLine = ema12.map(function(v,i){ return v-ema26[i]; });
+  var signal   = ema(macdLine,9);
+  var histogram= macdLine.map(function(v,i){ return v-signal[i]; });
+
+  return { ma20:ma20, ma50:ma50, ma200:ma200, rsi:rsi, macdLine:macdLine, signal:signal, histogram:histogram };
+}
+
+// ── Price chart with MA ───────────────────────────────────
+function renderPriceChart(closes, timestamps, ind){
+  var W=340,H=160,PL=44,PR=8,PT=8,PB=24;
+  var cW=W-PL-PR, cH=H-PT-PB;
+  var minV=Math.min.apply(null,closes.filter(Boolean))*0.97;
+  var maxV=Math.max.apply(null,closes.filter(Boolean))*1.03;
+  var n=closes.length;
+  function px(i){ return PL+i/(n-1)*cW; }
+  function py(v){ return PT+cH-(v-minV)/(maxV-minV)*cH; }
+  function mkPath(arr,from){
+    var pts=[];
+    arr.forEach(function(v,i){ if(v!=null&&i>=from) pts.push((pts.length===0?'M':'L')+px(i).toFixed(1)+','+py(v).toFixed(1)); });
+    return pts.join(' ');
+  }
+  var isUp = closes[n-1] >= closes[0];
+  var lineColor = isUp ? '#4ade80' : '#f87171';
+  var svg='<defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="'+lineColor+'" stop-opacity=".3"/><stop offset="95%" stop-color="'+lineColor+'" stop-opacity="0"/></linearGradient></defs>';
+  // Grid
+  for(var gi=0;gi<4;gi++){ var gv=minV+(maxV-minV)*gi/3; var gy=py(gv).toFixed(1); svg+='<line x1="'+PL+'" y1="'+gy+'" x2="'+(W-PR)+'" y2="'+gy+'" stroke="rgba(255,255,255,.04)" stroke-width="1"/>'; svg+='<text x="'+(PL-3)+'" y="'+(parseFloat(gy)+3)+'" text-anchor="end" font-size="8" fill="#334155">'+fmt(gv,0)+'</text>'; }
+  // X labels (months)
+  if(timestamps){ var months=['Jan','Feb','Mar','Apr','Maj','Jun','Jul','Aug','Sep','Okt','Nov','Dec']; var lastM=-1; timestamps.forEach(function(ts,i){ var m=new Date(ts*1000).getMonth(); if(m!==lastM&&i%(Math.floor(n/6))===0){ svg+='<text x="'+px(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="8" fill="#334155">'+months[m]+'</text>'; lastM=m; }}); }
+  // Area fill
+  var aPath=mkPath(closes,0); var bY=py(minV).toFixed(1);
+  svg+='<path d="'+aPath+' L'+px(n-1).toFixed(1)+','+bY+' L'+px(0)+','+bY+' Z" fill="url(#pg)"/>';
+  // MA lines
+  svg+='<path d="'+mkPath(ind.ma20,19)+'" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 2"/>';
+  svg+='<path d="'+mkPath(ind.ma50,49)+'" fill="none" stroke="#3b82f6" stroke-width="1.2"/>';
+  svg+='<path d="'+mkPath(ind.ma200,199)+'" fill="none" stroke="#a78bfa" stroke-width="1.2"/>';
+  // Price line
+  svg+='<path d="'+aPath+'" fill="none" stroke="'+lineColor+'" stroke-width="1.8"/>';
+  // Current price dot
+  var lastX=px(n-1).toFixed(1), lastY=py(closes[n-1]).toFixed(1);
+  svg+='<circle cx="'+lastX+'" cy="'+lastY+'" r="4" fill="'+lineColor+'" stroke="#070b12" stroke-width="1.5"/>';
+  return '<div class="card"><div class="stitle">Kursgraf · 1 år (daglig)</div><svg class="chart" viewBox="0 0 '+W+' '+H+'">'+svg+'</svg>'
+    +'<div class="chart-legend"><span class="leg"><span class="leg-dot" style="background:'+lineColor+'"></span>Kurs</span><span class="leg"><span class="leg-dot" style="background:#f59e0b"></span>MA20</span><span class="leg"><span class="leg-dot" style="background:#3b82f6"></span>MA50</span><span class="leg"><span class="leg-dot" style="background:#a78bfa"></span>MA200</span></div></div>';
+}
+
+// ── RSI chart ─────────────────────────────────────────────
+function renderRSIChart(rsi, timestamps){
+  var W=340,H=80,PL=30,PR=8,PT=6,PB=16;
+  var cW=W-PL-PR, cH=H-PT-PB;
+  var n=rsi.length;
+  function px(i){ return PL+i/(n-1)*cW; }
+  function py(v){ return PT+cH-(v/100)*cH; }
+  var svg='';
+  // Zones
+  svg+='<rect x="'+PL+'" y="'+py(70).toFixed(1)+'" width="'+cW+'" height="'+(py(30)-py(70)).toFixed(1)+'" fill="rgba(255,255,255,.02)"/>';
+  svg+='<line x1="'+PL+'" y1="'+py(70).toFixed(1)+'" x2="'+(W-PR)+'" y2="'+py(70).toFixed(1)+'" stroke="rgba(239,68,68,.3)" stroke-width="1" stroke-dasharray="3 2"/>';
+  svg+='<text x="'+(PL-3)+'" y="'+(parseFloat(py(70).toFixed(1))+3)+'" text-anchor="end" font-size="8" fill="#334155">70</text>';
+  svg+='<line x1="'+PL+'" y1="'+py(30).toFixed(1)+'" x2="'+(W-PR)+'" y2="'+py(30).toFixed(1)+'" stroke="rgba(34,197,94,.3)" stroke-width="1" stroke-dasharray="3 2"/>';
+  svg+='<text x="'+(PL-3)+'" y="'+(parseFloat(py(30).toFixed(1))+3)+'" text-anchor="end" font-size="8" fill="#334155">30</text>';
+  svg+='<text x="'+(PL-3)+'" y="'+(parseFloat(py(50).toFixed(1))+3)+'" text-anchor="end" font-size="8" fill="#334155">50</text>';
+  // RSI line
+  var pts=[]; rsi.forEach(function(v,i){ if(v!=null) pts.push((pts.length===0?'M':'L')+px(i).toFixed(1)+','+py(v).toFixed(1)); });
+  svg+='<path d="'+pts.join(' ')+'" fill="none" stroke="#06b6d4" stroke-width="1.5"/>';
+  // Current RSI value
+  var lastRSI=rsi.filter(Boolean).pop()||50;
+  var rsiColor=lastRSI>70?'#f87171':lastRSI<30?'#4ade80':'#06b6d4';
+  svg+='<text x="'+(W-PR)+'" y="'+py(lastRSI).toFixed(1)+'" text-anchor="end" font-size="9" font-weight="700" fill="'+rsiColor+'">'+fmt(lastRSI,0)+'</text>';
+  return '<div class="card"><div class="stitle">RSI (14) · '+fmt(lastRSI,1)+(lastRSI>70?' 🔴 Overkøbt':lastRSI<30?' 🟢 Oversolgt':' ⚪ Neutral')+'</div><svg class="chart" viewBox="0 0 '+W+' '+H+'">'+svg+'</svg></div>';
+}
+
+// ── MACD chart ────────────────────────────────────────────
+function renderMACDChart(ind, timestamps){
+  var W=340,H=80,PL=36,PR=8,PT=6,PB=16;
+  var cW=W-PL-PR, cH=H-PT-PB;
+  var n=ind.macdLine.length;
+  var allVals=ind.macdLine.concat(ind.signal).concat(ind.histogram).filter(function(v){return v!=null;});
+  var minV=Math.min.apply(null,allVals)*1.1;
+  var maxV=Math.max.apply(null,allVals)*1.1;
+  function px(i){ return PL+i/(n-1)*cW; }
+  function py(v){ return PT+cH-(v-minV)/(maxV-minV)*cH; }
+  var zeroY=py(0).toFixed(1);
+  var svg='<line x1="'+PL+'" y1="'+zeroY+'" x2="'+(W-PR)+'" y2="'+zeroY+'" stroke="rgba(255,255,255,.1)" stroke-width="1"/>';
+  svg+='<text x="'+(PL-3)+'" y="'+(parseFloat(zeroY)+3)+'" text-anchor="end" font-size="8" fill="#334155">0</text>';
+  // Histogram bars
+  var barW=Math.max(1,cW/n-1);
+  ind.histogram.forEach(function(v,i){ if(v==null) return; var x=px(i).toFixed(1); var y1=Math.min(parseFloat(py(v).toFixed(1)),parseFloat(zeroY)); var h=Math.abs(parseFloat(py(v).toFixed(1))-parseFloat(zeroY)); svg+='<rect x="'+x+'" y="'+y1+'" width="'+barW+'" height="'+Math.max(h,1)+'" fill="'+(v>=0?'rgba(34,197,94,.4)':'rgba(239,68,68,.4)')+'"/>'; });
+  // MACD + Signal lines
+  function mkPath(arr){ var pts=[]; arr.forEach(function(v,i){ if(v!=null) pts.push((pts.length===0?'M':'L')+px(i).toFixed(1)+','+py(v).toFixed(1)); }); return pts.join(' '); }
+  svg+='<path d="'+mkPath(ind.macdLine)+'" fill="none" stroke="#3b82f6" stroke-width="1.5"/>';
+  svg+='<path d="'+mkPath(ind.signal)+'" fill="none" stroke="#f97316" stroke-width="1.2"/>';
+  var lastMACD=ind.macdLine.filter(Boolean).pop()||0;
+  var lastSig=ind.signal.filter(Boolean).pop()||0;
+  var macdSignal=lastMACD>lastSig?'📈 Bullish':'📉 Bearish';
+  return '<div class="card"><div class="stitle">MACD (12,26,9) · '+macdSignal+'</div><svg class="chart" viewBox="0 0 '+W+' '+H+'">'+svg+'</svg>'
+    +'<div class="chart-legend"><span class="leg"><span class="leg-dot" style="background:#3b82f6"></span>MACD</span><span class="leg"><span class="leg-dot" style="background:#f97316"></span>Signal</span><span class="leg"><span class="leg-dot" style="background:#4ade80"></span>Histogram</span></div></div>';
+}
+
+// ── Technical signals ─────────────────────────────────────
+function renderSignals(ind, price, closes){
+  var n=closes.length;
+  var lastRSI=ind.rsi.filter(Boolean).pop()||50;
+  var lastMA50=ind.ma50.filter(Boolean).pop()||price;
+  var lastMA200=ind.ma200.filter(Boolean).pop()||price;
+  var lastMACD=ind.macdLine.filter(Boolean).pop()||0;
+  var lastSig=ind.signal.filter(Boolean).pop()||0;
+  var prevMACD=ind.macdLine.filter(Boolean).slice(-5,-1).pop()||0;
+  var prevSig=ind.signal.filter(Boolean).slice(-5,-1).pop()||0;
+
+  // Golden/death cross
+  var crossSignal='neutral', crossText='Ingen krydsning';
+  if(lastMA50>lastMA200&&(ind.ma50[n-10]||0)<(ind.ma200[n-10]||0)){ crossSignal='buy'; crossText='Golden Cross! 🌟'; }
+  else if(lastMA50>lastMA200){ crossSignal='buy'; crossText='MA50 > MA200'; }
+  else if(lastMA50<lastMA200){ crossSignal='sell'; crossText='MA50 < MA200'; }
+
+  // RSI signal
+  var rsiSignal='neutral', rsiText=fmt(lastRSI,0);
+  if(lastRSI>70){ rsiSignal='sell'; rsiText=fmt(lastRSI,0)+' – Overkøbt'; }
+  else if(lastRSI<30){ rsiSignal='buy'; rsiText=fmt(lastRSI,0)+' – Oversolgt'; }
+  else { rsiText=fmt(lastRSI,0)+' – Neutral'; }
+
+  // MACD signal
+  var macdSignal='neutral', macdText='Neutral';
+  if(lastMACD>lastSig&&prevMACD<=prevSig){ macdSignal='buy'; macdText='Bullish krydsning ↑'; }
+  else if(lastMACD<lastSig&&prevMACD>=prevSig){ macdSignal='sell'; macdText='Bearish krydsning ↓'; }
+  else if(lastMACD>lastSig){ macdSignal='buy'; macdText='Bullish momentum'; }
+  else { macdSignal='sell'; macdText='Bearish momentum'; }
+
+  // Price vs MA200
+  var ma200Signal='neutral', ma200Text='–';
+  if(lastMA200>0){ var dist=(price/lastMA200-1)*100; ma200Signal=dist>0?'buy':'sell'; ma200Text=(dist>0?'+':'')+fmt(dist,1)+'% fra MA200'; }
+
+  function sigBox(label,icon,signal,text){
+    var cls=signal==='buy'?'signal-buy':signal==='sell'?'signal-sell':'signal-neutral';
+    var valColor=signal==='buy'?'#4ade80':signal==='sell'?'#f87171':'#fbbf24';
+    return '<div class="signal-box '+cls+'"><div class="signal-icon">'+icon+'</div><div class="signal-name">'+label+'</div><div class="signal-val" style="color:'+valColor+'">'+text+'</div></div>';
+  }
+
+  return '<div class="stitle" style="padding-left:2px">📡 Tekniske signaler</div><div class="signals">'
+    +sigBox('Glidende snit','📊',crossSignal,crossText)
+    +sigBox('RSI (14)','💫',rsiSignal,rsiText)
+    +sigBox('MACD','📈',macdSignal,macdText)
+    +sigBox('Kurs vs MA200','🎯',ma200Signal,ma200Text)
+    +'</div>';
+}
+
+// ── Fundamentals ──────────────────────────────────────────
+function renderFundamentals(fund, currency){
+  var fd = fund.financialData || {};
+  var ks = fund.defaultKeyStatistics || {};
+  var sd = fund.summaryDetail || {};
+  var sp = fund.summaryProfile || {};
+
+  function r(lbl,val){ return '<tr><td>'+lbl+'</td><td>'+(val||'–')+'</td></tr>'; }
+
+  var html = '<div class="card"><div class="stitle">📋 Nøgletal & Regnskab</div>';
+  if(sp.longBusinessSummary) html += '<p style="font-size:11px;color:#64748b;margin-bottom:12px;line-height:1.5">'+(sp.longBusinessSummary||'').substring(0,200)+'...</p>';
+
+  html += '<table class="fund-table">';
+  html += r('Omsætning (TTM)',      fmtBig(fd.totalRevenue&&fd.totalRevenue.raw)+' '+currency);
+  html += r('Bruttomargin',         fd.grossMargins&&fd.grossMargins.raw ? fmt(fd.grossMargins.raw*100,1)+'%' : '–');
+  html += r('Driftsmargin',         fd.operatingMargins&&fd.operatingMargins.raw ? fmt(fd.operatingMargins.raw*100,1)+'%' : '–');
+  html += r('Nettoresultat (TTM)',   fmtBig(fd.netIncomeToCommon&&fd.netIncomeToCommon.raw)+' '+currency);
+  html += r('EPS (TTM)',             fmt(ks.trailingEps&&ks.trailingEps.raw,2)+' '+currency);
+  html += r('Forward P/E',          fmt(sd.forwardPE&&sd.forwardPE.raw,1));
+  html += r('P/B (kurs/bogværdi)',   fmt(ks.priceToBook&&ks.priceToBook.raw,2));
+  html += r('EV/EBITDA',            fmt(ks.enterpriseToEbitda&&ks.enterpriseToEbitda.raw,1));
+  html += r('Frie pengestrømme',    fmtBig(fd.freeCashflow&&fd.freeCashflow.raw)+' '+currency);
+  html += r('Gæld/egenkapital',     fmt(fd.debtToEquity&&fd.debtToEquity.raw,2));
+  html += r('Anbefaling (analytikere)', fd.recommendationKey ? fd.recommendationKey.toUpperCase() : '–');
+  html += r('Gns. kursmål',          fmt(fd.targetMeanPrice&&fd.targetMeanPrice.raw,2)+' '+currency);
+  html += r('Omsætningsvækst (YoY)', fd.revenueGrowth&&fd.revenueGrowth.raw ? pctFmt(fd.revenueGrowth.raw) : '–');
+  html += r('Indtjeningsvækst (YoY)',fd.earningsGrowth&&fd.earningsGrowth.raw ? pctFmt(fd.earningsGrowth.raw) : '–');
+  html += r('ROE (Egenkapitalafkast)', fd.returnOnEquity&&fd.returnOnEquity.raw ? fmt(fd.returnOnEquity.raw*100,1)+'%' : '–');
+  html += r('Sektor', sp.sector||'–');
+  html += r('Branche', sp.industry||'–');
+  html += '</table></div>';
+  return html;
+}
+
+// ── Earnings history ──────────────────────────────────────
+function renderEarnings(incomeHistory){
+  var stmts = incomeHistory.incomeStatementHistory;
+  if(!stmts||!stmts.length) return '';
+  var revenues = stmts.map(function(s){ return { date:s.endDate&&s.endDate.fmt, rev:s.totalRevenue&&s.totalRevenue.raw, net:s.netIncome&&s.netIncome.raw }; }).reverse();
+  var maxRev=Math.max.apply(null,revenues.map(function(r){return r.rev||0;}));
+  var bars=revenues.map(function(r){
+    var h=maxRev>0?Math.round((r.rev||0)/maxRev*70):0;
+    var netH=maxRev>0?Math.max(2,Math.round(Math.abs(r.net||0)/maxRev*70)):2;
+    return '<div class="e-bar-wrap">'
+      +'<div class="e-bar-val">'+fmtBig(r.rev)+'</div>'
+      +'<div style="display:flex;align-items:flex-end;gap:1px;height:70px">'
+      +'<div class="e-bar" style="height:'+h+'px;background:#3b82f6;flex:2"></div>'
+      +'<div class="e-bar" style="height:'+netH+'px;background:'+(r.net>=0?'#22c55e':'#ef4444')+';flex:1"></div>'
+      +'</div>'
+      +'<div class="e-bar-lbl">'+(r.date||'').substring(0,4)+'</div>'
+      +'</div>';
+  }).join('');
+  return '<div class="card"><div class="stitle">📅 Omsætning & nettoresultat (historisk)</div>'
+    +'<div class="earnings-bars">'+bars+'</div>'
+    +'<div class="chart-legend" style="margin-top:8px"><span class="leg"><span class="leg-dot" style="background:#3b82f6"></span>Omsætning</span><span class="leg"><span class="leg-dot" style="background:#22c55e"></span>Nettoresultat</span></div>'
+    +'</div>';
+}
+
+// ══════════════════════════════════════════════════════════
+// 🤖 AI DEEP ANALYSIS
+// ══════════════════════════════════════════════════════════
+function runAIAnalysis(){
+  var apiKey = document.getElementById('api-key-input').value.trim();
+  if(!apiKey){ alert('Indtast din Anthropic API-nøgle'); return; }
+  if(!currentTicker){ alert('Søg først på en aktie'); return; }
+
+  var btn = document.getElementById('ai-run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyserer...';
+
+  document.getElementById('ai-result-container').innerHTML =
+    '<div class="loading-card"><div class="spinner" style="width:32px;height:32px;border-width:3px;margin:0 auto 16px"></div><br><strong>Claude analyserer...</strong><br><span style="font-size:11px;color:#334155">Henter regnskaber, beregner signaler og genererer anbefaling</span></div>';
+
+  // Build data package for Claude
+  var chart = currentData && currentData.chart && currentData.chart.result && currentData.chart.result[0];
+  var fund  = currentFundamentals && currentFundamentals.quoteSummary && currentFundamentals.quoteSummary.result && currentFundamentals.quoteSummary.result[0];
+  var closes = chart ? chart.indicators.quote[0].close.filter(Boolean) : [];
+  var ind = closes.length ? calcIndicators(closes) : {};
+  var price = chart ? chart.meta.regularMarketPrice : 0;
+  var fd = fund && fund.financialData || {};
+  var ks = fund && fund.defaultKeyStatistics || {};
+  var sd = fund && fund.summaryDetail || {};
+  var sp = fund && fund.summaryProfile || {};
+  var lastRSI = ind.rsi ? ind.rsi.filter(Boolean).pop() : null;
+  var lastMA50 = ind.ma50 ? ind.ma50.filter(Boolean).pop() : null;
+  var lastMA200 = ind.ma200 ? ind.ma200.filter(Boolean).pop() : null;
+  var lastMACD = ind.macdLine ? ind.macdLine.filter(Boolean).pop() : null;
+  var lastSig = ind.signal ? ind.signal.filter(Boolean).pop() : null;
+  var ret1y = closes.length>1 ? (closes[closes.length-1]/closes[0]-1)*100 : null;
+
+  var dataStr = JSON.stringify({
+    ticker: currentTicker,
+    name: sp.longName || currentTicker,
+    sector: sp.sector,
+    industry: sp.industry,
+    description: sp.longBusinessSummary ? sp.longBusinessSummary.substring(0,500) : null,
+    price: price,
+    currency: chart ? chart.meta.currency : '',
+    change1y_pct: ret1y,
+    marketCap: sd.marketCap && sd.marketCap.raw,
+    pe_trailing: sd.trailingPE && sd.trailingPE.raw,
+    pe_forward: sd.forwardPE && sd.forwardPE.raw,
+    pb: ks.priceToBook && ks.priceToBook.raw,
+    evEbitda: ks.enterpriseToEbitda && ks.enterpriseToEbitda.raw,
+    eps: ks.trailingEps && ks.trailingEps.raw,
+    revenue: fd.totalRevenue && fd.totalRevenue.raw,
+    revenueGrowth: fd.revenueGrowth && fd.revenueGrowth.raw,
+    earningsGrowth: fd.earningsGrowth && fd.earningsGrowth.raw,
+    grossMargin: fd.grossMargins && fd.grossMargins.raw,
+    operatingMargin: fd.operatingMargins && fd.operatingMargins.raw,
+    netIncome: fd.netIncomeToCommon && fd.netIncomeToCommon.raw,
+    freeCashflow: fd.freeCashflow && fd.freeCashflow.raw,
+    debtToEquity: fd.debtToEquity && fd.debtToEquity.raw,
+    roe: fd.returnOnEquity && fd.returnOnEquity.raw,
+    analystTarget: fd.targetMeanPrice && fd.targetMeanPrice.raw,
+    analystRecommendation: fd.recommendationKey,
+    technical: {
+      rsi14: lastRSI,
+      ma50: lastMA50,
+      ma200: lastMA200,
+      priceVsMA50_pct: lastMA50 ? (price/lastMA50-1)*100 : null,
+      priceVsMA200_pct: lastMA200 ? (price/lastMA200-1)*100 : null,
+      macdAboveSignal: lastMACD && lastSig ? lastMACD > lastSig : null,
+      goldenCross: lastMA50 && lastMA200 ? lastMA50 > lastMA200 : null,
+    }
+  }, null, 2);
+
+  var prompt = `Du er en erfaren aktiestrateg og analytiker med ekspertise i fundamental og teknisk analyse. Du skal gennemføre en komplet, dybdegående analyse af følgende aktie og give konkrete, handlingsorienterede anbefalinger på DANSK.
+
+AKTIEDATA:
+${dataStr}
+
+Lav følgende analyse (vær konkret, specifik og brug tallene):
+
+1. **VIRKSOMHEDSANALYSE** – Hvad laver virksomheden, hvad er dens konkurrencemæssige fordele (moat), og hvad driver væksten?
+
+2. **FUNDAMENTAL ANALYSE** – Gennemgå nøgletallene kritisk: Er P/E-tallet attraktivt vs. sektor og vækst (PEG)? Hvordan ser marginer, cashflow og gæld ud? Er væksten bæredygtig?
+
+3. **TEKNISK ANALYSE** – Hvad fortæller RSI, MACD og MA-krydsningerne? Identificér vigtige støtte- og modstandsniveauer baseret på MA50/MA200.
+
+4. **RISIKOFAKTORER** – De 3-5 vigtigste risici der kan påvirke kursen negativt.
+
+5. **ANBEFALING: KØB / HOLD / SÆLG** – Giv én klar anbefaling med begrundelse. Angiv:
+   - **Anbefalingsstyrke**: Stærkt køb / Køb / Hold / Sælg / Stærkt sælg
+   - **Kursmål (12 måneder)**: Angiv et konkret kursmål i ${chart ? chart.meta.currency : 'lokal valuta'}
+   - **Indtjeningspotentiale**: Estimeret upside/downside i %
+   - **Tidspunkt**: Hvornår er det optimalt at købe/sælge baseret på tekniske niveauer?
+   - **Stop-loss niveau**: Angiv et konkret stop-loss kurs
+
+6. **KONKLUSION** – Sammenfat i 2-3 sætninger til en ikke-professionel dansk investor.
+
+Vær ærlig og balanceret – fremhæv både styrker og svagheder. Skriv i et klart dansk sprog der er forståeligt for en privat investor.`;
+
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role:'user', content: prompt }]
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    btn.disabled = false;
+    btn.innerHTML = '<span>🤖</span> Kør ny analyse';
+    if(data.error){ document.getElementById('ai-result-container').innerHTML='<div class="loading-card" style="color:#f87171">⚠️ API fejl: '+data.error.message+'</div>'; return; }
+    var text = data.content && data.content[0] && data.content[0].text || '';
+    renderAIResult(text);
+  })
+  .catch(function(e){
+    btn.disabled = false;
+    btn.innerHTML = '<span>🤖</span> Kør dybdeanalyse';
+    document.getElementById('ai-result-container').innerHTML='<div class="loading-card" style="color:#f87171">⚠️ Fejl: '+e.message+'<br><br><small>Tjek at din API-nøgle er korrekt og at du har saldo på din Anthropic-konto.</small></div>';
+  });
+}
+
+function renderAIResult(text){
+  // Parse sections
+  var html = '<div class="ai-result">';
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px"><span style="font-size:20px">🤖</span><div><div style="font-size:14px;font-weight:700;color:#c4b5fd">AI Dybdeanalyse · '+currentTicker+'</div><div style="font-size:10px;color:#475569">Genereret af Claude · Ikke finansiel rådgivning</div></div></div>';
+
+  // Detect recommendation for colored box
+  var recMatch = text.match(/ANBEFALING[:\s]*(STÆRKT KØB|KØB|HOLD|SÆLG|STÆRKT SÆLG)/i);
+  var targetMatch = text.match(/[Kk]ursmål[^\d]*(\d+[,.]?\d*)/);
+  var stopMatch = text.match(/[Ss]top.loss[^\d]*(\d+[,.]?\d*)/);
+
+  if(recMatch){
+    var rec = recMatch[1].toUpperCase();
+    var recCls = (rec.includes('KØB')?'rec-buy':rec.includes('SÆLG')?'rec-sell':'rec-hold');
+    var recEmoji = rec.includes('KØB')?'🟢':rec.includes('SÆLG')?'🔴':'🟡';
+    html += '<div class="rec-box '+recCls+'">';
+    html += '<div class="rec-label">Anbefaling</div>';
+    html += '<div class="rec-value">'+recEmoji+' '+rec+'</div>';
+    if(targetMatch) html += '<div class="rec-sub">Kursmål: '+targetMatch[1]+' · '+(stopMatch?'Stop-loss: '+stopMatch[1]:'')+'</div>';
+    html += '</div>';
+  }
+
+  // Format text: convert **bold** and ## headers
+  var formatted = text
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^#{1,3}\s(.+)$/gm,'<h3>$1</h3>')
+    .replace(/^(\d+\.\s)/gm,'<br><strong>$1</strong>')
+    .replace(/^-\s(.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>')
+    .replace(/\n\n/g,'</p><p>')
+    .replace(/\n/g,'<br>');
+  html += '<p>'+formatted+'</p>';
+  html += '</div>';
+  document.getElementById('ai-result-container').innerHTML = html;
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadKey();
+</script>
+</body>
+</html>
