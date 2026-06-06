@@ -105,6 +105,12 @@
     .leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#475569}
     .leg-dot{width:8px;height:8px;border-radius:2px;display:inline-block}
     .footer{text-align:center;font-size:10px;color:#1e293b;padding:0 8px}
+    #bank-btns{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+    .bank-btn{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:9px 12px;cursor:pointer;text-align:left;transition:.15s}
+    .bank-btn.active{background:rgba(59,130,246,.1);border-color:#3b82f6}
+    .bank-btn-name{font-size:12px;font-weight:600;color:#cbd5e1}
+    .bank-btn.active .bank-btn-name{color:#f1f5f9}
+    .bank-btn-rate{font-family:ui-monospace,monospace;font-size:12px;color:#38bdf8;font-weight:600}
     /* Number input */
     .num-input-wrap{display:flex;flex-direction:column;gap:4px}
     .num-input-wrap label{font-size:10px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
@@ -162,9 +168,19 @@
         <div class="sl-minmax"><span>0%</span><span>6%</span></div>
       </div>
       <div>
-        <div class="sl-top"><span class="sl-lbl">Bankrente (sammenligning)</span><span class="sl-val" id="v-bank">2%</span></div>
-        <input type="range" min="0" max="6" step="0.1" value="2" id="sl-bank" oninput="saveAndUpdate()"/>
-        <div class="sl-minmax"><span>0%</span><span>6%</span></div>
+        <div class="sl-top"><span class="sl-lbl">Bankprodukt (sammenligning)</span><span class="sl-val" id="v-bank">0,15%</span></div>
+        <div id="bank-btns">
+          <button class="bank-btn active" onclick="selectBank('opsparing')" data-key="opsparing"><span class="bank-btn-name">Opsparingskonto</span><span class="bank-btn-rate">0,15% → 0,25%</span></button>
+          <button class="bank-btn" onclick="selectBank('fast3')" data-key="fast3"><span class="bank-btn-name">Fastrente 3 mdr.</span><span class="bank-btn-rate">1,46% 🔒</span></button>
+          <button class="bank-btn" onclick="selectBank('fast6')" data-key="fast6"><span class="bank-btn-name">Fastrente 6 mdr.</span><span class="bank-btn-rate">1,61% 🔒</span></button>
+          <button class="bank-btn" onclick="selectBank('fast12')" data-key="fast12"><span class="bank-btn-name">Fastrente 12 mdr.</span><span class="bank-btn-rate">1,80% 🔒</span></button>
+          <button class="bank-btn" onclick="selectBank('custom')" data-key="custom"><span class="bank-btn-name">Manuel</span><span class="bank-btn-rate" id="custom-rate-lbl">2,0%</span></button>
+        </div>
+        <div id="bank-locked-notice" style="display:none;margin-top:8px;font-size:11px;color:#fbbf24;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:7px 10px">⚠️ Fastrente låser dine penge – du kan ikke hæve dem i perioden</div>
+        <div id="bank-custom-wrap" style="display:none;margin-top:10px">
+          <input type="range" min="0" max="6" step="0.1" value="2" id="sl-bank" oninput="onCustomBank()"/>
+          <div class="sl-minmax"><span>0%</span><span>6%</span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -192,7 +208,7 @@
 
   <!-- Bank comparison -->
   <div class="card" id="bank-card">
-    <div class="section-title">🏦 ETF vs. opsparingskonto (20 år)</div>
+    <div class="section-title">🏦 ETF vs. <span id="bank-product-name">Opsparingskonto</span> (20 år)</div>
     <div id="bank-compare"></div>
   </div>
 
@@ -246,6 +262,7 @@ function saveSettings(){
       ret:+document.getElementById('sl-return').value,
       inflation:+document.getElementById('sl-inflation').value,
       bank:+document.getElementById('sl-bank').value,
+      bankProduct:selectedBank,
       loft:loftMode,
       targetAmount:+document.getElementById('target-amount').value,
       targetYears:+document.getElementById('target-years').value
@@ -260,6 +277,7 @@ function loadSettings(){
     if(s.ret!=null) document.getElementById('sl-return').value=s.ret;
     if(s.inflation!=null) document.getElementById('sl-inflation').value=s.inflation;
     if(s.bank!=null) document.getElementById('sl-bank').value=s.bank;
+    if(s.bankProduct) selectBank(s.bankProduct);
     if(s.loft) { loftMode=s.loft; document.getElementById('tog'+s.loft.replace('k','')+'').className='tog active'; document.getElementById(s.loft==='500k'?'tog174':'tog500').className='tog'; }
     if(s.targetAmount!=null) document.getElementById('target-amount').value=s.targetAmount;
     if(s.targetYears!=null) document.getElementById('target-years').value=s.targetYears;
@@ -369,18 +387,60 @@ function simulate(start,monthly,ret,years,loft){
   return{rows:rows,loftHit:loftHit};
 }
 
-// Bank simulation (no tax complexity, lagerbeskatning 17% on gains for simplicity)
-function simBank(start,monthly,rate,years){
-  var mr=Math.pow(1+rate,1/12)-1;
-  var v=start;
-  var rows=[];
-  var totalIn=start;
-  for(var yr=1;yr<=years;yr++){
-    var yStart=v;var contrib=0;
-    for(var m=0;m<12;m++){v=v*(1+mr)+monthly;contrib+=monthly;}
-    totalIn+=contrib;
-    // Bank interest is capital income, taxed ~37% in DK (not modeling exactly, just showing gross)
-    rows.push({yr:yr,tv:Math.round(v),contrib:Math.round(totalIn)});
+// Bank products
+var BANK_PRODUCTS = {
+  opsparing: { name:'Opsparingskonto', rate1:0.0015, rate2:0.0025, threshold:500000, locked:false },
+  fast3:     { name:'Fastrente 3 mdr.', rate1:0.0146, rate2:0.0146, threshold:999999999, locked:true },
+  fast6:     { name:'Fastrente 6 mdr.', rate1:0.0161, rate2:0.0161, threshold:999999999, locked:true },
+  fast12:    { name:'Fastrente 12 mdr.', rate1:0.0180, rate2:0.0180, threshold:999999999, locked:true },
+  custom:    { name:'Manuel rente', rate1:0.02, rate2:0.02, threshold:999999999, locked:false },
+};
+var selectedBank = 'opsparing';
+
+function selectBank(key) {
+  selectedBank = key;
+  // Update button states
+  document.querySelectorAll('.bank-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelector('[data-key="'+key+'"]').classList.add('active');
+  // Show/hide locked notice
+  var locked = BANK_PRODUCTS[key].locked;
+  document.getElementById('bank-locked-notice').style.display = locked ? 'block' : 'none';
+  // Show/hide custom slider
+  document.getElementById('bank-custom-wrap').style.display = key==='custom' ? 'block' : 'none';
+  // Update label
+  var p = BANK_PRODUCTS[key];
+  var rateLabel = key==='opsparing' ? '0,15% / 0,25%' : key==='custom' ? document.getElementById('sl-bank').value.replace('.',',')+'%' : (p.rate1*100).toFixed(2).replace('.',',')+'%';
+  document.getElementById('v-bank').textContent = rateLabel;
+  // Update product name in card title
+  var el = document.getElementById('bank-product-name');
+  if(el) el.textContent = p.name;
+  saveAndUpdate();
+}
+
+function onCustomBank() {
+  var val = +document.getElementById('sl-bank').value;
+  BANK_PRODUCTS.custom.rate1 = val/100;
+  BANK_PRODUCTS.custom.rate2 = val/100;
+  document.getElementById('custom-rate-lbl').textContent = val.toFixed(1).replace('.',',')+'%';
+  document.getElementById('v-bank').textContent = val.toFixed(1).replace('.',',')+'%';
+  saveAndUpdate();
+}
+
+function simBank(start,monthly,bankKey,years){
+  var prod = BANK_PRODUCTS[bankKey] || BANK_PRODUCTS.opsparing;
+  var v = start;
+  var rows = [];
+  var totalIn = start;
+  for(var yr=1; yr<=years; yr++){
+    var contrib=0;
+    for(var m=0; m<12; m++){
+      var rate = v >= prod.threshold ? prod.rate2 : prod.rate1;
+      var mr = Math.pow(1+rate, 1/12)-1;
+      v = v*(1+mr) + monthly;
+      contrib += monthly;
+    }
+    totalIn += contrib;
+    rows.push({yr:yr, tv:Math.round(v), contrib:Math.round(totalIn)});
   }
   return rows;
 }
@@ -416,18 +476,18 @@ function update(){
   var monthly=+document.getElementById('sl-monthly').value;
   var ret=+document.getElementById('sl-return').value;
   var inflation=+document.getElementById('sl-inflation').value;
-  var bankRate=+document.getElementById('sl-bank').value;
+  var bankRate = selectedBank==='custom' ? +document.getElementById('sl-bank').value : (BANK_PRODUCTS[selectedBank].rate1*100);
   var loft=loftMode==='500k'?500000:174200;
 
   document.getElementById('v-start').textContent=start.toLocaleString('da-DK')+' kr.';
   document.getElementById('v-monthly').textContent=monthly.toLocaleString('da-DK')+' kr.';
   document.getElementById('v-return').textContent=ret+'%';
   document.getElementById('v-inflation').textContent=inflation+'%';
-  document.getElementById('v-bank').textContent=bankRate+'%';
+  // bank label updated by selectBank()
 
   var res=simulate(start,monthly,ret/100,20,loft);
   var rows=res.rows,lh=res.loftHit;
-  var bankRows=simBank(start,monthly,bankRate/100,20);
+  var bankRows=simBank(start,monthly,selectedBank,20);
 
   // Notice
   var n=document.getElementById('notice');
@@ -469,7 +529,8 @@ function update(){
     var pct=Math.round(val/maxV*100);
     return '<div class="compare-row"><span class="compare-label">'+label+'</span><div class="compare-bar-wrap"><div class="compare-bar" style="width:'+pct+'%;background:'+color+'"></div></div><span class="compare-val" style="color:'+textColor+'">'+fDKK(val)+'</span></div>';
   }
-  bc.innerHTML=bar('ETF (ASK)',etf20,'linear-gradient(90deg,#3b82f6,#06b6d4)','#38bdf8')+bar('Bank '+bankRate+'%',bank20,'linear-gradient(90deg,#f59e0b,#ea580c)','#fbbf24');
+  var bName = BANK_PRODUCTS[selectedBank].name;
+  bc.innerHTML=bar('ETF (ASK)',etf20,'linear-gradient(90deg,#3b82f6,#06b6d4)','#38bdf8')+bar(bName,bank20,'linear-gradient(90deg,#f59e0b,#ea580c)','#fbbf24');
   var diff=etf20-bank20;
   bc.innerHTML+='<div style="font-size:11px;color:#64748b;text-align:center;margin-top:8px">ETF giver <span style="color:#4ade80;font-weight:700">'+fDKK(Math.abs(diff))+'</span> '+(diff>0?'mere':'mindre')+' efter 20 år</div>';
 
