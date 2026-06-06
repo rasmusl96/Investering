@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Investeringsværktøjer</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#070b12"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Inv. Værktøjer"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:#070b12;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+    /* Layout */
+    #app{display:flex;flex-direction:column;height:100vh;height:100dvh}
+    .header{background:#0a0f1e;border-bottom:1px solid rgba(255,255,255,.06);padding:max(env(safe-area-inset-top),14px) 16px 12px;flex-shrink:0}
+    .header-row{display:flex;align-items:center;justify-content:space-between}
+    .header-title{font-size:17px;font-weight:700;color:#f1f5f9}
+    .header-sub{font-size:11px;color:#475569;margin-top:2px}
+    .back-btn{color:#3b82f6;font-size:13px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:4px}
+    .content{flex:1;overflow-y:auto;padding:16px 16px calc(env(safe-area-inset-bottom) + 80px)}
+    /* Tab bar */
+    .tabbar{position:fixed;bottom:0;left:0;right:0;background:#0a0f1e;border-top:1px solid rgba(255,255,255,.06);display:flex;padding-bottom:max(env(safe-area-inset-bottom),4px);z-index:100}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px 4px;cursor:pointer;gap:3px;border:none;background:transparent}
+    .tab-icon{font-size:20px;line-height:1}
+    .tab-label{font-size:9px;font-weight:600;color:#475569;letter-spacing:.04em}
+    .tab.active .tab-label{color:#3b82f6}
+    /* Pages */
+    .page{display:none}
+    .page.active{display:block}
+    /* Cards */
+    .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;margin-bottom:14px}
+    .card-accent{border-radius:14px;padding:14px;margin-bottom:14px;position:relative;overflow:hidden}
+    .card-accent::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+    .fire-card::before{background:linear-gradient(90deg,#f97316,#ef4444)}
+    .tax-card::before{background:linear-gradient(90deg,#f59e0b,#ea580c)}
+    .port-card::before{background:linear-gradient(90deg,#22c55e,#06b6d4)}
+    .fx-card::before{background:linear-gradient(90deg,#a78bfa,#3b82f6)}
+    .aop-card::before{background:linear-gradient(90deg,#ec4899,#f97316)}
+    .card-accent{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08)}
+    /* Section title */
+    .stitle{font-size:10px;color:#475569;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
+    /* Inputs */
+    .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+    .field label{font-size:10px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.1em}
+    .field input{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:11px 13px;color:#f1f5f9;font-size:15px;font-family:ui-monospace,monospace;width:100%;outline:none}
+    .field input:focus{border-color:#3b82f6}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    /* Slider */
+    .sl-wrap{margin-bottom:14px}
+    .sl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+    .sl-lbl{font-size:10px;color:#475569;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+    .sl-val{font-family:ui-monospace,monospace;font-size:15px;font-weight:600;color:#38bdf8}
+    input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:rgba(255,255,255,.12);outline:none}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#3b82f6;border:2px solid #1e40af;cursor:pointer}
+    .sl-minmax{display:flex;justify-content:space-between;font-size:10px;color:#334155;margin-top:3px}
+    /* Result boxes */
+    .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+    .result-box{background:rgba(255,255,255,.03);border-radius:12px;padding:12px;text-align:center}
+    .result-box.highlight{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2)}
+    .result-box.fire{background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.2)}
+    .result-box.green{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18)}
+    .result-box.red{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.18)}
+    .rb-lbl{font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+    .rb-val{font-family:ui-monospace,monospace;font-size:16px;font-weight:700;color:#f1f5f9}
+    .rb-sub{font-size:10px;color:#64748b;margin-top:3px}
+    /* Progress bar */
+    .progress-wrap{margin-bottom:14px}
+    .progress-label{display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:6px}
+    .progress-track{background:rgba(255,255,255,.07);border-radius:6px;height:12px;overflow:hidden}
+    .progress-bar{height:100%;border-radius:6px;transition:width .5s}
+    /* Toggle */
+    .toggle-row{display:flex;gap:6px;margin-bottom:14px}
+    .tog{flex:1;border-radius:10px;padding:9px 8px;cursor:pointer;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#64748b;text-align:center}
+    .tog.active{background:rgba(59,130,246,.15);border-color:#3b82f6;color:#f1f5f9}
+    /* Portfolio list */
+    .trade-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+    .trade-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center}
+    .trade-left{}
+    .trade-date{font-size:10px;color:#475569;margin-bottom:2px}
+    .trade-main{font-size:13px;font-weight:600;color:#f1f5f9}
+    .trade-sub{font-size:11px;color:#64748b}
+    .trade-right{text-align:right}
+    .trade-val{font-family:ui-monospace,monospace;font-size:14px;font-weight:700;color:#38bdf8}
+    .trade-gain{font-size:11px;font-weight:600}
+    .del-btn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;padding:5px 9px;color:#f87171;font-size:11px;cursor:pointer;margin-top:4px}
+    /* Add trade form */
+    .add-form{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:14px;padding:14px;margin-bottom:14px}
+    .add-btn{width:100%;background:linear-gradient(135deg,#1d4ed8,#0891b2);border:none;border-radius:10px;padding:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+    .sec-btn{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:11px;color:#94a3b8;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px}
+    /* Currency bars */
+    .fx-bar-wrap{margin-bottom:10px}
+    .fx-bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+    .fx-bar-label{font-size:12px;font-weight:600;color:#cbd5e1}
+    .fx-bar-pct{font-size:11px;color:#64748b}
+    .fx-bar-track{background:rgba(255,255,255,.06);border-radius:4px;height:8px;overflow:hidden}
+    .fx-bar-fill{height:100%;border-radius:4px}
+    .fx-impact{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px}
+    .fx-impact-box{background:rgba(255,255,255,.03);border-radius:10px;padding:10px;text-align:center}
+    .fx-impact-lbl{font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+    .fx-impact-val{font-family:ui-monospace,monospace;font-size:13px;font-weight:700}
+    /* AOP chart */
+    .aop-compare{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+    .aop-row{display:flex;align-items:center;gap:10px}
+    .aop-lbl{font-size:11px;color:#94a3b8;width:50px;flex-shrink:0}
+    .aop-bar-wrap{flex:1;background:rgba(255,255,255,.05);border-radius:4px;height:22px;overflow:hidden;position:relative}
+    .aop-bar{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:600;color:rgba(255,255,255,.8);transition:width .5s}
+    .aop-val{font-family:ui-monospace,monospace;font-size:12px;font-weight:600;width:70px;text-align:right;flex-shrink:0}
+    /* Misc */
+    .notice{border-radius:10px;padding:10px 13px;font-size:12px;display:flex;gap:8px;margin-bottom:12px}
+    .notice.info{background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);color:#60a5fa}
+    .notice.warn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);color:#fbbf24}
+    .notice.ok{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);color:#4ade80}
+    .divider{border:none;border-top:1px solid rgba(255,255,255,.06);margin:14px 0}
+    .mono{font-family:ui-monospace,monospace}
+    .footer-copy{text-align:center;font-size:10px;color:#1e293b;padding:8px 0 0}
+    /* Home link */
+    .home-link{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:12px;padding:12px;color:#60a5fa;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:14px}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-row">
+      <div>
+        <div class="header-title" id="page-title">🔥 FIRE-beregner</div>
+        <div class="header-sub">Investeringsværktøjer</div>
+      </div>
+      <a href="index.html" class="back-btn">← Beregner</a>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ FIRE PAGE ══ -->
+    <div class="page active" id="page-fire">
+      <div class="card-accent fire-card">
+        <div class="stitle">🔥 Financial Independence</div>
+        <p style="font-size:12px;color:#64748b;margin-bottom:14px">Baseret på 4%-reglen: din formue skal være 25× dine årlige udgifter, så du kan leve af afkastet uden at røre kapitalen.</p>
+        <div class="field-row">
+          <div class="field"><label>Månedlige udgifter</label><input type="number" id="fire-expenses" value="25000" oninput="calcFIRE()"/></div>
+          <div class="field"><label>Nuværende opsparing</label><input type="number" id="fire-savings" value="50000" oninput="calcFIRE()"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Månedligt indskud</label><input type="number" id="fire-monthly" value="5000" oninput="calcFIRE()"/></div>
+          <div class="field"><label>Inflation %</label><input type="number" id="fire-inflation" value="2" step="0.5" oninput="calcFIRE()"/></div>
+        </div>
+        <div class="sl-wrap">
+          <div class="sl-top"><span class="sl-lbl">Forventet afkast p.a.</span><span class="sl-val" id="fire-ret-val">8%</span></div>
+          <input type="range" min="3" max="15" step="0.5" value="8" id="fire-ret" oninput="document.getElementById('fire-ret-val').textContent=this.value+'%';calcFIRE()"/>
+          <div class="sl-minmax"><span>3%</span><span>15%</span></div>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <div class="result-box fire">
+          <div class="rb-lbl">FIRE-beløb</div>
+          <div class="rb-val" id="fire-target">–</div>
+          <div class="rb-sub">25× årlige udgifter</div>
+        </div>
+        <div class="result-box highlight">
+          <div class="rb-lbl">År til FIRE</div>
+          <div class="rb-val" id="fire-years">–</div>
+          <div class="rb-sub" id="fire-year-label">ved nuværende kurs</div>
+        </div>
+        <div class="result-box">
+          <div class="rb-lbl">Månedlig frihed</div>
+          <div class="rb-val" id="fire-withdrawal">–</div>
+          <div class="rb-sub">ved 4% udtræk p.a.</div>
+        </div>
+        <div class="result-box">
+          <div class="rb-lbl">Realt FIRE-beløb</div>
+          <div class="rb-val" id="fire-real">–</div>
+          <div class="rb-sub">inflationsjusteret</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">Fremskridt mod FIRE</div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span id="fire-prog-label">0%</span><span id="fire-prog-target">–</span></div>
+          <div class="progress-track"><div class="progress-bar" id="fire-prog-bar" style="background:linear-gradient(90deg,#f97316,#ef4444);width:0%"></div></div>
+        </div>
+        <div id="fire-milestone" style="font-size:11px;color:#64748b;text-align:center"></div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">Hvornår er du fri? (tidslinje)</div>
+        <svg id="fire-chart" viewBox="0 0 320 130" style="width:100%;display:block"></svg>
+      </div>
+    </div>
+
+    <!-- ══ SKAT PAGE ══ -->
+    <div class="page" id="page-skat">
+      <div class="card-accent tax-card">
+        <div class="stitle">🧾 Lagerbeskatning</div>
+        <p style="font-size:12px;color:#64748b;margin-bottom:12px">Beregn din skat for det aktuelle år. Lagerbeskatning opgøres som årets urealiserede gevinst – du betaler skat hvert år uanset om du sælger.</p>
+        <div class="toggle-row">
+          <button class="tog active" id="tax-ask-btn" onclick="setTaxType('ask')">ASK (17%)</button>
+          <button class="tog" id="tax-free-btn" onclick="setTaxType('free')">Frie midler (27/42%)</button>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Portefølje 1. jan</label><input type="number" id="tax-start" value="200000" oninput="calcTax()"/></div>
+          <div class="field"><label>Portefølje 31. dec</label><input type="number" id="tax-end" value="250000" oninput="calcTax()"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Indskud i år</label><input type="number" id="tax-deposits" value="60000" oninput="calcTax()"/></div>
+          <div class="field"><label>Fremf. tab (frie midler)</label><input type="number" id="tax-carry" value="0" oninput="calcTax()" id="tax-carry"/></div>
+        </div>
+      </div>
+
+      <div id="tax-result-box"></div>
+
+      <div class="card">
+        <div class="stitle">📅 Vigtige datoer</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:12px;align-items:start">
+            <span style="font-size:20px">🗓</span>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9">ASK – betaling i december</div><div style="font-size:11px;color:#64748b">SKAT beregner automatisk fra kontobevægelser</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:start">
+            <span style="font-size:20px">📋</span>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9">Frie midler – årsopgørelse marts</div><div style="font-size:11px;color:#64748b">Indberettes via årsopgørelsen. Tab fremføres automatisk.</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:start">
+            <span style="font-size:20px">💡</span>
+            <div><div style="font-size:13px;font-weight:600;color:#f1f5f9">Tab fra frie midler</div><div style="font-size:11px;color:#64748b">Modregnes i fremtidige gevinster – aldrig tabt, men kun i aktieindkomst.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PORTEFØLJE PAGE ══ -->
+    <div class="page" id="page-port">
+      <div class="card-accent port-card">
+        <div class="stitle">📋 Porteføljetracker · IWDA</div>
+        <p style="font-size:12px;color:#64748b;margin-bottom:12px">Registrér dine køb og se din gennemsnitlige indkøbskurs, urealiseret gevinst og samlet eksponering.</p>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="flex:1">
+            <div style="font-size:10px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Aktuel IWDA kurs (EUR)</div>
+            <input type="number" id="port-live-price" placeholder="f.eks. 98.50" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;color:#38bdf8;font-family:ui-monospace,monospace;font-size:16px;font-weight:700;width:100%;outline:none" oninput="renderPortfolio()"/>
+          </div>
+          <button onclick="fetchPortPrice()" style="background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:10px 12px;color:#60a5fa;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">↻ Hent<br>live</button>
+        </div>
+      </div>
+
+      <div id="port-summary" style="display:none;margin-bottom:14px"></div>
+
+      <div class="add-form">
+        <div class="stitle">+ Tilføj køb</div>
+        <div class="field-row">
+          <div class="field"><label>Dato</label><input type="date" id="trade-date" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;color:#f1f5f9;font-size:14px;width:100%;outline:none;-webkit-appearance:none"/></div>
+          <div class="field"><label>Antal andele</label><input type="number" id="trade-qty" placeholder="10" step="0.001"/></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Kurs per andel (EUR)</label><input type="number" id="trade-price" placeholder="95.50" step="0.01"/></div>
+          <div class="field"><label>EUR/DKK kurs</label><input type="number" id="trade-fx" value="7.46" step="0.001"/></div>
+        </div>
+        <button class="add-btn" onclick="addTrade()">+ Tilføj køb</button>
+      </div>
+
+      <div class="stitle">Køb</div>
+      <div class="trade-list" id="trade-list"></div>
+      <button class="sec-btn" id="clear-trades-btn" onclick="clearTrades()" style="display:none">🗑 Ryd alle køb</button>
+    </div>
+
+    <!-- ══ VALUTA PAGE ══ -->
+    <div class="page" id="page-fx">
+      <div class="card-accent fx-card">
+        <div class="stitle">💱 Valutaeksponering · MSCI World</div>
+        <p style="font-size:12px;color:#64748b;margin-bottom:12px">MSCI World er domineret af USD. Her ser du hvad din portefølje egentlig er eksponeret mod valutamæssigt og hvad der sker hvis dollaren falder.</p>
+        <div class="field"><label>Din IWDA-portefølje (DKK)</label><input type="number" id="fx-portfolio" value="200000" oninput="calcFX()"/></div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">Geografisk fordeling (MSCI World apr. 2025)</div>
+        <div id="fx-bars"></div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">DKK-eksponering per valuta</div>
+        <div id="fx-exposure"></div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">📉 Følsomhedsanalyse – hvad hvis USD falder?</div>
+        <div class="sl-wrap">
+          <div class="sl-top"><span class="sl-lbl">USD ændring</span><span class="sl-val" id="fx-scenario-val">-10%</span></div>
+          <input type="range" min="-30" max="30" step="5" value="-10" id="fx-scenario" oninput="document.getElementById('fx-scenario-val').textContent=(this.value>0?'+':'')+this.value+'%';calcFX()"/>
+          <div class="sl-minmax"><span>-30%</span><span>+30%</span></div>
+        </div>
+        <div id="fx-impact"></div>
+      </div>
+
+      <div class="notice info">
+        <span>ℹ️</span>
+        <span>DKK er fastlåst til EUR (ERM II). EUR-eksponering er dermed neutral for danske investorer.</span>
+      </div>
+    </div>
+
+    <!-- ══ ÅOP PAGE ══ -->
+    <div class="page" id="page-aop">
+      <div class="card-accent aop-card">
+        <div class="stitle">💸 ÅOP-beregner & Renters rente</div>
+        <p style="font-size:12px;color:#64748b;margin-bottom:14px">Se hvad årlige omkostninger (ÅOP) faktisk koster over tid – og kraften i renters rente.</p>
+        <div class="field-row">
+          <div class="field"><label>Startbeløb</label><input type="number" id="aop-start" value="50000" oninput="calcAOP()"/></div>
+          <div class="field"><label>Månedligt indskud</label><input type="number" id="aop-monthly" value="5000" oninput="calcAOP()"/></div>
+        </div>
+        <div class="sl-wrap">
+          <div class="sl-top"><span class="sl-lbl">Bruttoafkast p.a.</span><span class="sl-val" id="aop-ret-val">8%</span></div>
+          <input type="range" min="3" max="15" step="0.5" value="8" id="aop-ret" oninput="document.getElementById('aop-ret-val').textContent=this.value+'%';calcAOP()"/>
+          <div class="sl-minmax"><span>3%</span><span>15%</span></div>
+        </div>
+        <div class="sl-wrap">
+          <div class="sl-top"><span class="sl-lbl">Tidshorisont</span><span class="sl-val" id="aop-years-val">20 år</span></div>
+          <input type="range" min="5" max="40" step="1" value="20" id="aop-years" oninput="document.getElementById('aop-years-val').textContent=this.value+' år';calcAOP()"/>
+          <div class="sl-minmax"><span>5 år</span><span>40 år</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">Sammenlign ÅOP-niveauer</div>
+        <div class="aop-compare" id="aop-compare"></div>
+        <div id="aop-iwda-note" style="font-size:11px;color:#64748b;text-align:center;margin-top:4px">IWDA har ÅOP på 0,20% · En af de billigste globale ETF'er</div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">Hvad koster din ÅOP?</div>
+        <div id="aop-cost-box"></div>
+      </div>
+
+      <div class="card">
+        <div class="stitle">⚡ Renters rente – dobbleringstid</div>
+        <div id="aop-double"></div>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+
+  <!-- Tab bar -->
+  <div class="tabbar">
+    <button class="tab active" onclick="showTab('fire','🔥 FIRE-beregner')">
+      <span class="tab-icon">🔥</span><span class="tab-label">FIRE</span>
+    </button>
+    <button class="tab" onclick="showTab('skat','🧾 Lagerbeskatning')">
+      <span class="tab-icon">🧾</span><span class="tab-label">Skat</span>
+    </button>
+    <button class="tab" onclick="showTab('port','📋 Portefølje')">
+      <span class="tab-icon">📋</span><span class="tab-label">Portefølje</span>
+    </button>
+    <button class="tab" onclick="showTab('fx','💱 Valuta')">
+      <span class="tab-icon">💱</span><span class="tab-label">Valuta</span>
+    </button>
+    <button class="tab" onclick="showTab('aop','💸 ÅOP & Rentes rente')">
+      <span class="tab-icon">💸</span><span class="tab-label">ÅOP</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ── Tab navigation ────────────────────────────────────────
+function showTab(id, title) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  document.getElementById('page-title').textContent = title;
+  document.querySelector('.content').scrollTop = 0;
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function fDKK(v){ if(v>=1e6) return (v/1e6).toFixed(2).replace('.',',')+' mio. kr.'; return Math.round(v).toLocaleString('da-DK')+' kr.'; }
+function fNum(v){ return Math.round(v).toLocaleString('da-DK'); }
+function pct(v){ return (v>=0?'+':'')+v.toFixed(1)+'%'; }
+
+// ══════════════════════════════════════════════════════════
+// 🔥 FIRE CALCULATOR
+// ══════════════════════════════════════════════════════════
+function calcFIRE() {
+  var expenses  = +document.getElementById('fire-expenses').value || 25000;
+  var savings   = +document.getElementById('fire-savings').value  || 0;
+  var monthly   = +document.getElementById('fire-monthly').value  || 5000;
+  var ret       = +document.getElementById('fire-ret').value / 100;
+  var inflation = +document.getElementById('fire-inflation').value / 100;
+
+  var annualExp = expenses * 12;
+  var fireTarget = annualExp * 25; // 4% rule
+  var withdrawal = fireTarget * 0.04 / 12;
+
+  // Simulate month by month
+  var v = savings;
+  var months = 0;
+  var MAX = 600; // 50 years
+  var chartData = [savings];
+  while (v < fireTarget && months < MAX) {
+    var mr = Math.pow(1+ret, 1/12)-1;
+    v = v*(1+mr) + monthly;
+    months++;
+    if (months % 12 === 0) chartData.push(Math.round(v));
+  }
+  var years = months < MAX ? (months/12).toFixed(1) : null;
+  var realTarget = fireTarget * Math.pow(1+inflation, months/12);
+  var progress = Math.min(savings/fireTarget*100, 100);
+
+  document.getElementById('fire-target').textContent = fDKK(fireTarget);
+  document.getElementById('fire-years').textContent = years ? years+' år' : '> 50 år';
+  document.getElementById('fire-year-label').textContent = years ? 'ca. år '+(new Date().getFullYear()+Math.ceil(months/12)) : 'sæt afkast/indskud op';
+  document.getElementById('fire-withdrawal').textContent = fDKK(withdrawal)+'/md.';
+  document.getElementById('fire-real').textContent = fDKK(realTarget);
+
+  // Progress
+  document.getElementById('fire-prog-bar').style.width = progress.toFixed(1)+'%';
+  document.getElementById('fire-prog-label').textContent = progress.toFixed(1)+'% af FIRE-mål';
+  document.getElementById('fire-prog-target').textContent = fDKK(fireTarget);
+  document.getElementById('fire-milestone').textContent = progress < 100
+    ? 'Du mangler '+fDKK(fireTarget-savings)+' · '+fDKK(monthly)+'/md. investeret'
+    : '🎉 Du har allerede nået dit FIRE-mål!';
+
+  // Chart
+  drawFIREChart(chartData, fireTarget);
+}
+
+function drawFIREChart(data, target) {
+  var W=320, H=130, PL=42, PR=10, PT=10, PB=24;
+  var cW=W-PL-PR, cH=H-PT-PB;
+  var maxV=Math.max(target*1.1, data[data.length-1]*1.05);
+  function px(i){ return PL + i/(data.length-1)*cW; }
+  function py(v){ return PT + cH - (v/maxV)*cH; }
+  var svg='<defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#f97316" stop-opacity=".4"/><stop offset="95%" stop-color="#f97316" stop-opacity="0"/></linearGradient></defs>';
+  // Grid
+  [0,0.25,0.5,0.75,1].forEach(function(f){
+    var y=py(maxV*f).toFixed(1);
+    svg+='<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="rgba(255,255,255,.04)" stroke-width="1"/>';
+    svg+='<text x="'+(PL-3)+'" y="'+(parseFloat(y)+3)+'" text-anchor="end" font-size="8" fill="#334155">'+Math.round(maxV*f/1e3)+'K</text>';
+  });
+  // X labels
+  data.forEach(function(v,i){
+    if(i%5===0||i===data.length-1) svg+='<text x="'+px(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="8" fill="#334155">'+i+'å</text>';
+  });
+  // FIRE target line
+  var ty=py(target).toFixed(1);
+  svg+='<line x1="'+PL+'" y1="'+ty+'" x2="'+(W-PR)+'" y2="'+ty+'" stroke="#f97316" stroke-width="1" stroke-dasharray="4 3"/>';
+  svg+='<text x="'+(W-PR-2)+'" y="'+(parseFloat(ty)-3)+'" text-anchor="end" font-size="8" fill="#f97316">FIRE</text>';
+  // Area
+  var path=data.map(function(v,i){return(i===0?'M':'L')+px(i).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
+  var bY=py(0).toFixed(1);
+  svg+='<path d="'+path+' L'+px(data.length-1).toFixed(1)+','+bY+' L'+px(0)+','+bY+' Z" fill="url(#fg)"/>';
+  svg+='<path d="'+path+'" fill="none" stroke="#f97316" stroke-width="2"/>';
+  document.getElementById('fire-chart').innerHTML=svg;
+}
+
+// ══════════════════════════════════════════════════════════
+// 🧾 TAX CALCULATOR
+// ══════════════════════════════════════════════════════════
+var taxType = 'ask';
+function setTaxType(t) {
+  taxType = t;
+  document.getElementById('tax-ask-btn').className = 'tog'+(t==='ask'?' active':'');
+  document.getElementById('tax-free-btn').className = 'tog'+(t==='free'?' active':'');
+  document.getElementById('tax-carry').disabled = t==='ask';
+  document.getElementById('tax-carry').style.opacity = t==='ask'?'0.4':'1';
+  calcTax();
+}
+function calcTax() {
+  var start    = +document.getElementById('tax-start').value    || 0;
+  var end      = +document.getElementById('tax-end').value      || 0;
+  var deposits = +document.getElementById('tax-deposits').value || 0;
+  var carry    = taxType==='free' ? (+document.getElementById('tax-carry').value||0) : 0;
+
+  var gain = end - start - deposits;
+  var taxableGain = gain + carry; // carry is negative (loss), so this reduces gain
+  var tax = 0, taxNote = '';
+
+  if (taxType === 'ask') {
+    if (gain > 0) { tax = gain * 0.17; taxNote = '17% af gevinst'; }
+    else { tax = 0; taxNote = 'Tab – ingen skat dette år'; }
+  } else {
+    if (taxableGain > 0) {
+      var low = Math.min(taxableGain, 61000) * 0.27;
+      var high = Math.max(0, taxableGain-61000) * 0.42;
+      tax = low + high;
+      taxNote = taxableGain<=61000 ? '27% af '+fDKK(taxableGain) : '27% af 61.000 kr. + 42% af '+fDKK(taxableGain-61000);
+    } else {
+      tax = 0;
+      taxNote = 'Tab på '+fDKK(Math.abs(taxableGain))+' fremføres til næste år';
+    }
+  }
+
+  var newCarry = taxableGain < 0 ? Math.abs(taxableGain) : 0;
+  var html = '';
+
+  if (gain === 0) { document.getElementById('tax-result-box').innerHTML=''; return; }
+
+  html += '<div class="result-grid">';
+  html += '<div class="result-box '+(gain>=0?'highlight':'red')+'"><div class="rb-lbl">Årets gevinst</div><div class="rb-val">'+(gain>=0?'+':'')+fDKK(gain)+'</div><div class="rb-sub">urealiseret</div></div>';
+  html += '<div class="result-box '+(tax>0?'red':'green')+'"><div class="rb-lbl">Skat at betale</div><div class="rb-val">'+fDKK(tax)+'</div><div class="rb-sub">'+taxNote+'</div></div>';
+  html += '</div>';
+
+  if (taxType==='free' && newCarry > 0) {
+    html += '<div class="notice warn"><span>📋</span><span>Tab på <strong>'+fDKK(newCarry)+'</strong> fremføres og modregnes i næste års gevinst.</span></div>';
+  }
+  if (tax > 0) {
+    html += '<div class="notice info"><span>💡</span><span>Du har '+fDKK(end-tax)+' tilbage på kontoen efter skat er betalt.</span></div>';
+  }
+
+  document.getElementById('tax-result-box').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════
+// 📋 PORTFOLIO TRACKER
+// ══════════════════════════════════════════════════════════
+var trades = JSON.parse(localStorage.getItem('port_trades')||'[]');
+
+function saveTrades(){ localStorage.setItem('port_trades', JSON.stringify(trades)); }
+
+function addTrade() {
+  var date  = document.getElementById('trade-date').value;
+  var qty   = +document.getElementById('trade-qty').value;
+  var price = +document.getElementById('trade-price').value;
+  var fx    = +document.getElementById('trade-fx').value || 7.46;
+  if (!date||!qty||!price) { alert('Udfyld dato, antal og kurs'); return; }
+  trades.push({ id:Date.now(), date:date, qty:qty, price:price, fx:fx });
+  saveTrades();
+  document.getElementById('trade-qty').value='';
+  document.getElementById('trade-price').value='';
+  renderPortfolio();
+}
+
+function deleteTrade(id) {
+  trades = trades.filter(function(t){ return t.id!==id; });
+  saveTrades();
+  renderPortfolio();
+}
+
+function clearTrades() {
+  if(confirm('Slet alle køb?')){ trades=[]; saveTrades(); renderPortfolio(); }
+}
+
+function fetchPortPrice() {
+  var btn = event.currentTarget;
+  btn.textContent = '⏳';
+  var base = 'https://query1.finance.yahoo.com/v8/finance/chart/IWDA.AS?interval=1d&range=5d';
+  var proxies = [
+    'https://corsproxy.io/?url='+encodeURIComponent(base),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(base),
+    base
+  ];
+  function tryP(i) {
+    if(i>=proxies.length){ btn.innerHTML='↻ Hent<br>live'; return; }
+    var ctrl=new AbortController(); var t=setTimeout(function(){ctrl.abort();},6000);
+    fetch(proxies[i],{signal:ctrl.signal}).then(function(r){clearTimeout(t);return r.json();})
+      .then(function(j){
+        var price=j.chart.result[0].meta.regularMarketPrice;
+        document.getElementById('port-live-price').value=price.toFixed(2);
+        btn.innerHTML='✓ '+price.toFixed(2);
+        setTimeout(function(){btn.innerHTML='↻ Hent<br>live';},2000);
+        renderPortfolio();
+      }).catch(function(){clearTimeout(t);tryP(i+1);});
+  }
+  tryP(0);
+}
+
+function renderPortfolio() {
+  var livePrice = +document.getElementById('port-live-price').value || 0;
+  var list = document.getElementById('trade-list');
+  var summary = document.getElementById('port-summary');
+
+  if (trades.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#334155;font-size:12px;padding:20px">Ingen køb endnu. Tilføj dit første køb ovenfor.</div>';
+    summary.style.display = 'none';
+    document.getElementById('clear-trades-btn').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('clear-trades-btn').style.display = 'block';
+
+  // Calculate totals
+  var totalQty=0, totalCostDKK=0;
+  trades.forEach(function(t){ totalQty+=t.qty; totalCostDKK+=t.qty*t.price*t.fx; });
+  var avgPrice = totalCostDKK / totalQty / (trades[0]?trades[0].fx:7.46); // avg in EUR approx
+  var currentValueDKK = livePrice>0 ? totalQty*livePrice*(trades[trades.length-1].fx) : 0;
+  var unrealizedDKK = currentValueDKK - totalCostDKK;
+  var unrealizedPct = totalCostDKK>0 ? unrealizedDKK/totalCostDKK*100 : 0;
+
+  // Summary
+  var sHtml = '<div class="result-grid">';
+  sHtml += '<div class="result-box highlight"><div class="rb-lbl">Antal andele</div><div class="rb-val">'+totalQty.toFixed(3)+'</div><div class="rb-sub">IWDA</div></div>';
+  sHtml += '<div class="result-box"><div class="rb-lbl">Samlet investeret</div><div class="rb-val">'+fDKK(totalCostDKK)+'</div><div class="rb-sub">inkl. vekslingsomk.</div></div>';
+  if (livePrice>0) {
+    sHtml += '<div class="result-box '+(unrealizedDKK>=0?'green':'red')+'"><div class="rb-lbl">Urealiseret gevinst</div><div class="rb-val">'+(unrealizedDKK>=0?'+':'')+fDKK(unrealizedDKK)+'</div><div class="rb-sub">'+(unrealizedPct>=0?'+':'')+unrealizedPct.toFixed(1)+'%</div></div>';
+    sHtml += '<div class="result-box highlight"><div class="rb-lbl">Nuværende værdi</div><div class="rb-val">'+fDKK(currentValueDKK)+'</div><div class="rb-sub">ved '+livePrice.toFixed(2)+' EUR</div></div>';
+  }
+  sHtml += '</div>';
+  summary.innerHTML = sHtml;
+  summary.style.display = 'block';
+
+  // Trade list
+  var sorted = trades.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+  list.innerHTML = sorted.map(function(t) {
+    var costDKK = t.qty*t.price*t.fx;
+    var currDKK = livePrice>0 ? t.qty*livePrice*t.fx : 0;
+    var gainDKK = currDKK - costDKK;
+    var gainPct = costDKK>0 ? gainDKK/costDKK*100 : 0;
+    return '<div class="trade-item">'
+      +'<div class="trade-left">'
+      +'<div class="trade-date">'+t.date+'</div>'
+      +'<div class="trade-main">'+t.qty.toFixed(3)+' andele @ '+t.price.toFixed(2)+' EUR</div>'
+      +'<div class="trade-sub">'+fDKK(costDKK)+' · FX: '+t.fx+'</div>'
+      +'<button class="del-btn" onclick="deleteTrade('+t.id+')">Slet</button>'
+      +'</div>'
+      +'<div class="trade-right">'
+      +(livePrice>0?'<div class="trade-val">'+fDKK(currDKK)+'</div><div class="trade-gain" style="color:'+(gainDKK>=0?'#4ade80':'#f87171')+'">'+(gainDKK>=0?'+':'')+fDKK(gainDKK)+' ('+gainPct.toFixed(1)+'%)</div>':'<div class="trade-val">'+fDKK(costDKK)+'</div>')
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// 💱 CURRENCY EXPOSURE
+// ══════════════════════════════════════════════════════════
+var FX_BREAKDOWN = [
+  { region:'USA',          currency:'USD', pct:72.8, color:'#3b82f6', flag:'🇺🇸' },
+  { region:'Eurozonen',    currency:'EUR', pct:10.2, color:'#22c55e', flag:'🇪🇺' },
+  { region:'Japan',        currency:'JPY', pct:5.5,  color:'#f59e0b', flag:'🇯🇵' },
+  { region:'UK',           currency:'GBP', pct:4.1,  color:'#8b5cf6', flag:'🇬🇧' },
+  { region:'Canada',       currency:'CAD', pct:3.1,  color:'#ef4444', flag:'🇨🇦' },
+  { region:'Schweiz',      currency:'CHF', pct:2.5,  color:'#06b6d4', flag:'🇨🇭' },
+  { region:'Australien',   currency:'AUD', pct:1.8,  color:'#f97316', flag:'🇦🇺' },
+];
+
+function calcFX() {
+  var portfolio = +document.getElementById('fx-portfolio').value || 200000;
+  var scenario  = +document.getElementById('fx-scenario').value / 100;
+
+  // Geographic bars
+  var bars = FX_BREAKDOWN.map(function(r) {
+    var dkk = portfolio * r.pct/100;
+    return '<div class="fx-bar-wrap">'
+      +'<div class="fx-bar-top"><span class="fx-bar-label">'+r.flag+' '+r.region+' ('+r.currency+')</span><span class="fx-bar-pct">'+r.pct+'%  ·  '+fDKK(dkk)+'</span></div>'
+      +'<div class="fx-bar-track"><div class="fx-bar-fill" style="width:'+r.pct+'%;background:'+r.color+'"></div></div>'
+      +'</div>';
+  }).join('');
+  document.getElementById('fx-bars').innerHTML = bars;
+
+  // Exposure
+  var eurNote = '<div class="notice info" style="margin-top:10px"><span>🔒</span><span>EUR er neutralt for dig – DKK følger EUR via fastkurspolitikken.</span></div>';
+  var exp = FX_BREAKDOWN.map(function(r){
+    var dkk=portfolio*r.pct/100;
+    var neutral = r.currency==='EUR';
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">'
+      +'<span style="font-size:13px;color:'+(neutral?'#475569':'#cbd5e1')+'">'+r.flag+' '+r.currency+(neutral?' (neutral)':'')+'</span>'
+      +'<span style="font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:'+(neutral?'#334155':'#38bdf8')+'">'+fDKK(dkk)+'</span>'
+      +'</div>';
+  }).join('');
+  document.getElementById('fx-exposure').innerHTML = exp + eurNote;
+
+  // Sensitivity
+  var usdExposure = portfolio * 0.728;
+  var impact = usdExposure * scenario;
+  var newValue = portfolio + impact;
+  var otherImpact = portfolio * (1-0.728) * 0; // other currencies unchanged
+
+  var boxes = '<div class="fx-impact">'
+    +'<div class="fx-impact-box"><div class="fx-impact-lbl">USD-eksponering</div><div class="fx-impact-val" style="color:#3b82f6">'+fDKK(usdExposure)+'</div></div>'
+    +'<div class="fx-impact-box"><div class="fx-impact-lbl">Portefølje ændring</div><div class="fx-impact-val" style="color:'+(impact>=0?'#4ade80':'#f87171')+'">'+(impact>=0?'+':'')+fDKK(impact)+'</div></div>'
+    +'<div class="fx-impact-box"><div class="fx-impact-lbl">Ny porteføljeværdi</div><div class="fx-impact-val" style="color:#f1f5f9">'+fDKK(newValue)+'</div></div>'
+    +'</div>';
+  var note = scenario < 0
+    ? '<div class="notice warn"><span>📉</span><span>USD falder '+Math.abs(scenario*100)+'% → din portefølje falder med <strong>'+fDKK(Math.abs(impact))+'</strong> i DKK-termer, selvom IWDA-kursen er uændret i USD.</span></div>'
+    : '<div class="notice ok"><span>📈</span><span>USD stiger '+Math.abs(scenario*100)+'% → din portefølje stiger med <strong>'+fDKK(impact)+'</strong> i DKK-termer.</span></div>';
+  document.getElementById('fx-impact').innerHTML = boxes + note;
+}
+
+// ══════════════════════════════════════════════════════════
+// 💸 ÅOP CALCULATOR
+// ══════════════════════════════════════════════════════════
+var AOP_LEVELS = [
+  { pct:0.00, label:'0,00%', name:'Ingen ÅOP', color:'#22c55e' },
+  { pct:0.20, label:'0,20%', name:'IWDA (iShares)', color:'#3b82f6' },
+  { pct:0.50, label:'0,50%', name:'Aktiv fond', color:'#f59e0b' },
+  { pct:1.00, label:'1,00%', name:'Dyr fond', color:'#ef4444' },
+  { pct:1.50, label:'1,50%', name:'Meget dyr', color:'#dc2626' },
+];
+
+function simAOP(start, monthly, grossRet, aop, years) {
+  var netRet = grossRet - aop;
+  var mr = Math.pow(1+netRet, 1/12)-1;
+  var v = start;
+  for(var yr=0; yr<years; yr++) {
+    for(var m=0; m<12; m++) v = v*(1+mr)+monthly;
+  }
+  return Math.round(v);
+}
+
+function calcAOP() {
+  var start   = +document.getElementById('aop-start').value   || 50000;
+  var monthly = +document.getElementById('aop-monthly').value || 5000;
+  var ret     = +document.getElementById('aop-ret').value     / 100;
+  var years   = +document.getElementById('aop-years').value   || 20;
+
+  var results = AOP_LEVELS.map(function(a){ return { ...a, val: simAOP(start,monthly,ret,a.pct/100,years) }; });
+  var maxVal = results[0].val;
+
+  var rows = results.map(function(r) {
+    var w = (r.val/maxVal*100).toFixed(1);
+    var diff = r.val - maxVal;
+    var diffStr = r.pct===0 ? '' : ' ('+fDKK(diff)+')';
+    return '<div class="aop-row">'
+      +'<span class="aop-lbl">'+r.label+'</span>'
+      +'<div class="aop-bar-wrap"><div class="aop-bar" style="width:'+w+'%;background:'+r.color+'">'+r.name+'</div></div>'
+      +'<span class="aop-val" style="color:'+r.color+'">'+fDKK(r.val)+'<br><span style="font-size:9px;color:#475569">'+diffStr+'</span></span>'
+      +'</div>';
+  }).join('');
+  document.getElementById('aop-compare').innerHTML = rows;
+
+  // Cost box – IWDA vs 0
+  var zero = results[0].val;
+  var iwda = results[1].val;
+  var expensive = results[3].val;
+  document.getElementById('aop-cost-box').innerHTML =
+    '<div class="result-grid">'
+    +'<div class="result-box red"><div class="rb-lbl">IWDA koster dig (vs 0%)</div><div class="rb-val">'+fDKK(zero-iwda)+'</div><div class="rb-sub">over '+years+' år</div></div>'
+    +'<div class="result-box red"><div class="rb-lbl">1% ÅOP koster dig</div><div class="rb-val">'+fDKK(zero-expensive)+'</div><div class="rb-sub">vs IWDA: '+fDKK(iwda-expensive)+'</div></div>'
+    +'</div>';
+
+  // Doubling time (Rule of 72)
+  var double72 = (72/((ret-0.002)*100)).toFixed(1);
+  var double72_free = (72/(ret*100)).toFixed(1);
+  document.getElementById('aop-double').innerHTML =
+    '<div class="result-grid">'
+    +'<div class="result-box highlight"><div class="rb-lbl">Dobblingstid (IWDA)</div><div class="rb-val">'+double72+' år</div><div class="rb-sub">72 / '+(((ret-0.002)*100).toFixed(1))+'%</div></div>'
+    +'<div class="result-box"><div class="rb-lbl">Dobblingstid (0% ÅOP)</div><div class="rb-val">'+double72_free+' år</div><div class="rb-sub">72 / '+(ret*100).toFixed(1)+'%</div></div>'
+    +'</div>'
+    +'<p style="font-size:11px;color:#475569;text-align:center;margin-top:6px">72-reglen: del 72 med dit afkast % for at finde dobblingstiden</p>';
+}
+
+// ── Init all ──────────────────────────────────────────────
+// Set today's date in trade form
+document.getElementById('trade-date').value = new Date().toISOString().split('T')[0];
+// Disable carry for ASK by default
+document.getElementById('tax-carry').disabled = true;
+document.getElementById('tax-carry').style.opacity = '0.4';
+
+calcFIRE();
+calcTax();
+renderPortfolio();
+calcFX();
+calcAOP();
+</script>
+<div style="text-align:center;font-size:10px;color:#1e293b;padding:8px 0 16px">© Rasmus Lund Larsen 2026</div>
+</body>
+</html>
