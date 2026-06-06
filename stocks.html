@@ -601,7 +601,9 @@ function runAIAnalysis(){
     }
   }, null, 2);
 
-  var prompt = `Du er en erfaren aktiestrateg og analytiker med ekspertise i fundamental og teknisk analyse. Du skal gennemføre en komplet, dybdegående analyse af følgende aktie og give konkrete, handlingsorienterede anbefalinger på DANSK.
+  var prompt = `Du er en erfaren aktiestrateg. VIGTIGT: Start analysen DIREKTE – ingen introduktion, ingen 'selvfølgelig', ingen preamble. Første linje skal være analysen.
+
+Lav en komplet, dybdegående analyse af følgende aktie på DANSK.
 
 AKTIEDATA:
 ${dataStr}
