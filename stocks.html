@@ -121,8 +121,10 @@
     <div class="ai-wrap">
       <div class="stitle">🤖 AI Dybdeanalyse · Gemini 2.5 Flash</div>
       <p style="font-size:12px;color:#64748b">Komplet fundamental + teknisk analyse med køb/sælg og kursmål. Kræver OpenRouter API-nøgle.</p>
-      <input class="ai-key" id="api-key" type="password" placeholder="sk-or-v1-..."/>
+      <input class="ai-key" id="api-key" type="password" placeholder="sk-or-v1-... (OpenRouter)"/>
       <p style="font-size:10px;color:#334155;margin-top:5px">🔒 Gemmes kun lokalt – sendes kun til OpenRouter.</p>
+      <input class="ai-key" id="fmp-key" type="password" placeholder="FMP-nøgle (valgfri – live US-nøgletal)" style="margin-top:8px"/>
+      <p style="font-size:10px;color:#334155;margin-top:5px">📊 Gratis nøgle fra financialmodelingprep.com giver live nøgletal for amerikanske aktier. Danske aktier bruger AI-estimat.</p>
       <button class="ai-btn" id="ai-btn" onclick="runAI()">🤖 Kør dybdeanalyse</button>
     </div>
     <div id="ai-out"></div>
@@ -136,10 +138,12 @@ var ticker = '';
 var chartData = null;
 var fundData = null;
 var aiStats = null;
+var fmpStats = null;
 
 // ── Key storage ───────────────────────────────────────────
-(function(){ try{ var k=localStorage.getItem('or_key'); if(k) document.getElementById('api-key').value=k; }catch(e){} })();
+(function(){ try{ var k=localStorage.getItem('or_key'); if(k) document.getElementById('api-key').value=k; var f=localStorage.getItem('fmp_key'); if(f) document.getElementById('fmp-key').value=f; }catch(e){} })();
 document.getElementById('api-key').addEventListener('input', function(){ try{ localStorage.setItem('or_key', this.value); }catch(e){} });
+document.getElementById('fmp-key').addEventListener('input', function(){ try{ localStorage.setItem('fmp_key', this.value); }catch(e){} });
 
 // ── Format helpers ────────────────────────────────────────
 function f2(v)  { if(v==null||!isFinite(+v)) return '–'; return (+v).toFixed(2); }
@@ -184,6 +188,7 @@ function load(t) {
   chartData = null;
   fundData = null;
   aiStats = null;
+  fmpStats = null;
   document.getElementById('ticker-input').value = t;
   document.getElementById('ai-section').style.display = 'none';
   document.getElementById('content').innerHTML =
@@ -196,6 +201,7 @@ function load(t) {
       chartData = data;
       render();
       loadFundamentals(t);
+      fetchFMP(t);
       fetchAIStats(t);
     })
     .catch(function() {
@@ -248,11 +254,16 @@ function render() {
   var pe         = (pr.trailingPE&&pr.trailingPE.raw) || (sd.trailingPE&&sd.trailingPE.raw);
   var divYld     = (sd.dividendYield&&sd.dividendYield.raw);
   var beta       = (ks.beta&&ks.beta.raw) || (sd.beta&&sd.beta.raw);
-  // AI estimate fallback (marked with ~)
+  // Data priority: Yahoo > FMP (live US) > AI estimate (~)
   var mcEst=false, peEst=false, divEst=false, betaEst=false;
+  // FMP live data first (US stocks)
+  if(marketCap==null && fmpStats && fmpStats.marketCap!=null){ marketCap=fmpStats.marketCap; }
+  if(pe==null && fmpStats && fmpStats.pe!=null){ pe=fmpStats.pe; }
+  // AI estimate fallback (marked with ~)
   if(marketCap==null && aiStats && aiStats.marketCap!=null){ marketCap=aiStats.marketCap; mcEst=true; }
   if(pe==null && aiStats && aiStats.pe!=null){ pe=aiStats.pe; peEst=true; }
   if(divYld==null && aiStats && aiStats.dividendYield!=null){ divYld=aiStats.dividendYield/100; divEst=true; }
+  if(beta==null && fmpStats && fmpStats.beta!=null){ beta=fmpStats.beta; }
   if(beta==null && aiStats && aiStats.beta!=null){ beta=aiStats.beta; betaEst=true; }
 
   // Technical indicators
@@ -443,6 +454,29 @@ function renderEarnings(inc, cur) {
       +'</div>';
   }).join('');
   return '<div class="card"><div class="stitle">📅 Historisk omsætning & resultat</div><div style="display:flex;align-items:flex-end;gap:4px;padding:4px 0">'+bars+'</div><div class="chart-legend" style="margin-top:8px"><span class="leg"><span class="leg-dot" style="background:#3b82f6"></span>Omsætning</span><span class="leg"><span class="leg-dot" style="background:#22c55e"></span>Nettoresultat</span></div></div>';
+}
+
+// ── FMP live stats (US stocks) ────────────────────────────
+function fetchFMP(t) {
+  var key = document.getElementById('fmp-key').value.trim();
+  if(!key) return;
+  // Only US stocks (no exchange suffix like .CO, .AS, .DE)
+  if(t.indexOf('.') !== -1) return;
+  var url = 'https://financialmodelingprep.com/api/v3/quote/' + t + '?apikey=' + key;
+  fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(Array.isArray(data) && data[0] && data[0].price) {
+        fmpStats = {
+          marketCap: data[0].marketCap,
+          pe: data[0].pe,
+          beta: null, // quote endpoint doesn't include beta
+          eps: data[0].eps
+        };
+        render();
+      }
+    })
+    .catch(function(){});
 }
 
 // ── Quick AI stats fill ───────────────────────────────────
