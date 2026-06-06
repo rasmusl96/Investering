@@ -182,7 +182,7 @@ function loadKey(){
 }
 
 // ── Helpers ───────────────────────────────────────────────
-function fmt(v,dec){ if(v==null||isNaN(v)) return '–'; return (+v).toFixed(dec||0).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
+function fmt(v,dec){ if(v==null||v===undefined||isNaN(v)||!isFinite(v)) return '–'; return (+v).toFixed(dec||0).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); }
 function fmtBig(v){ if(v==null||isNaN(v)) return '–'; if(Math.abs(v)>=1e12) return (v/1e12).toFixed(2)+' T'; if(Math.abs(v)>=1e9) return (v/1e9).toFixed(2)+' mia.'; if(Math.abs(v)>=1e6) return (v/1e6).toFixed(1)+' mio.'; return Math.round(v).toLocaleString(); }
 function pctFmt(v){ if(v==null||isNaN(v)) return '–'; return (v>0?'+':'')+( v*100).toFixed(1)+'%'; }
 
@@ -223,7 +223,8 @@ function loadTicker(ticker){
   var priceUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?interval=1d&range=1y';
   var fundUrl  = 'https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=financialData,defaultKeyStatistics,summaryProfile,incomeStatementHistory,balanceSheetHistory,cashflowStatementHistory,earningsTrend,summaryDetail';
 
-  var quoteUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols='+ticker;
+  // Try v7 quote endpoint (most fields) with v6 as backup
+  var quoteUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols='+ticker+'&fields=regularMarketPrice,marketCap,trailingPE,forwardPE,beta,fiftyTwoWeekHigh,fiftyTwoWeekLow,trailingAnnualDividendYield,epsTrailingTwelveMonths';
 
   // Fetch all three in parallel, fail gracefully
   proxyFetch(priceUrl)
@@ -232,8 +233,11 @@ function loadTicker(ticker){
       // Try quote + fundamentals in parallel but don't block on them
       Promise.allSettled([proxyFetch(quoteUrl, 6000), proxyFetch(fundUrl, 8000)])
         .then(function(results){
-          currentQuote = results[0].status==='fulfilled' ? results[0].value : null;
+          var quoteResult = results[0].status==='fulfilled' ? results[0].value : null;
+          // Validate quote result has actual data
+          currentQuote = (quoteResult && quoteResult.quoteResponse && quoteResult.quoteResponse.result && quoteResult.quoteResponse.result.length) ? quoteResult : null;
           currentFundamentals = results[1].status==='fulfilled' ? results[1].value : null;
+          // If quote failed, try the fundamentals summaryDetail as fallback (already done in renderAll)
           renderAll();
         });
     })
@@ -278,15 +282,18 @@ function renderAll(){
   var sd = fund && fund.summaryDetail;
   // v7 quote data - more reliable for quick stats
   var q = currentQuote && currentQuote.quoteResponse && currentQuote.quoteResponse.result && currentQuote.quoteResponse.result[0];
-  // Calculate 52wk high/low directly from chart data
-  var validCloses = closes.filter(Boolean);
-  var wk52High = Math.max.apply(null, validCloses);
-  var wk52Low  = Math.min.apply(null, validCloses);
-  // Get market cap, P/E, beta, dividend from quote or summaryDetail
-  var marketCap   = (q&&q.marketCap)         || (sd&&sd.marketCap&&sd.marketCap.raw);
-  var trailingPE  = (q&&q.trailingPE)        || (sd&&sd.trailingPE&&sd.trailingPE.raw);
-  var dividendYld = (q&&q.trailingAnnualDividendYield) || (sd&&sd.dividendYield&&sd.dividendYield.raw);
-  var beta        = (q&&q.beta)              || (sd&&sd.beta&&sd.beta.raw) || (ks&&ks.beta&&ks.beta.raw);
+  // 52wk high/low from chart data (always available)
+  var validCloses = closes.filter(function(v){ return v!=null && isFinite(v) && v>0; });
+  var wk52High = validCloses.length ? Math.max.apply(null, validCloses) : null;
+  var wk52Low  = validCloses.length ? Math.min.apply(null, validCloses) : null;
+  // Also check meta for 52wk if available
+  if(!wk52High && meta.fiftyTwoWeekHigh) wk52High = meta.fiftyTwoWeekHigh;
+  if(!wk52Low  && meta.fiftyTwoWeekLow)  wk52Low  = meta.fiftyTwoWeekLow;
+  // Market cap, P/E, beta, dividend – from quote (v7) then summaryDetail fallback
+  var marketCap   = (q&&q.marketCap!=null?q.marketCap:null)                  || (sd&&sd.marketCap&&sd.marketCap.raw!=null?sd.marketCap.raw:null);
+  var trailingPE  = (q&&q.trailingPE!=null?q.trailingPE:null)                || (sd&&sd.trailingPE&&sd.trailingPE.raw!=null?sd.trailingPE.raw:null);
+  var dividendYld = (q&&q.trailingAnnualDividendYield!=null?q.trailingAnnualDividendYield:null) || (sd&&sd.dividendYield&&sd.dividendYield.raw!=null?sd.dividendYield.raw:null);
+  var beta        = (q&&q.beta!=null?q.beta:null)                            || (sd&&sd.beta&&sd.beta.raw!=null?sd.beta.raw:null) || (ks&&ks.beta&&ks.beta.raw!=null?ks.beta.raw:null);
   html += '<div class="stats-grid">';
   html += stat('52-ugers høj', fmt(wk52High,2));
   html += stat('52-ugers lav', fmt(wk52Low,2));
