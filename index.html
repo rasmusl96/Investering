@@ -12,11 +12,36 @@
   <link rel="apple-touch-icon" href="icon-192.png"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{min-height:100%;background:#070b12;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent}
+    html,body{min-height:100%;background:#070b12;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent;font-size:14px}
     .wrap{padding:max(env(safe-area-inset-top),24px) 16px 48px}
     .badge{background:linear-gradient(90deg,#3b82f6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;display:block;text-align:center;margin-bottom:6px}
     h1{font-size:22px;font-weight:700;color:#f1f5f9;text-align:center;margin-bottom:4px}
-    .sub{color:#475569;font-size:12px;text-align:center;margin-bottom:22px}
+    .sub{color:#475569;font-size:12px;text-align:center;margin-bottom:16px}
+
+    /* Live card */
+    .live-card{background:rgba(255,255,255,.025);border:1px solid rgba(59,130,246,.25);border-radius:14px;padding:14px;margin-bottom:14px;position:relative;overflow:hidden}
+    .live-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+    .live-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .live-title{font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase}
+    .live-refresh{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:5px 10px;color:#60a5fa;font-size:11px;font-weight:600;cursor:pointer}
+    .live-price-row{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+    .live-price{font-family:ui-monospace,monospace;font-size:26px;font-weight:700;color:#f1f5f9}
+    .live-change{font-size:13px;font-weight:600;border-radius:6px;padding:2px 7px}
+    .live-change.pos{background:rgba(34,197,94,.15);color:#4ade80}
+    .live-change.neg{background:rgba(239,68,68,.15);color:#f87171}
+    .live-returns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+    .ret-box{background:rgba(255,255,255,.03);border-radius:8px;padding:8px 4px;text-align:center}
+    .ret-lbl{font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+    .ret-val{font-family:ui-monospace,monospace;font-size:13px;font-weight:600}
+    .ret-val.pos{color:#4ade80}
+    .ret-val.neg{color:#f87171}
+    .live-apply{width:100%;background:linear-gradient(135deg,#1d4ed8,#0891b2);border:none;border-radius:10px;padding:10px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+    .live-meta{font-size:10px;color:#334155;text-align:center;margin-top:8px}
+    .live-loading{text-align:center;padding:16px;color:#475569;font-size:12px}
+    .live-error{text-align:center;padding:12px;color:#f87171;font-size:12px}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(59,130,246,.3);border-top-color:#3b82f6;border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
     .toggle-row{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:14px}
     .toggle-label{font-size:11px;color:#64748b}
     .tog{border-radius:10px;padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600;line-height:1.4;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#64748b;transition:.2s}
@@ -26,7 +51,6 @@
     .notice.ok{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);color:#4ade80}
     .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;margin-bottom:14px}
     .slider-row{display:flex;flex-direction:column;gap:18px}
-    .sl-item{}
     .sl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
     .sl-lbl{font-size:10px;color:#475569;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
     .sl-val{font-family:ui-monospace,monospace;font-size:16px;font-weight:600;color:#38bdf8}
@@ -54,6 +78,17 @@
   <span class="badge">MSCI World ETF · Aktiesparekonto</span>
   <h1>Investeringsberegner</h1>
   <p class="sub">ASK 17% · Frie midler 27/42% lagerbeskatning</p>
+
+  <!-- Live ETF card -->
+  <div class="live-card">
+    <div class="live-top">
+      <span class="live-title">📈 IWDA · Euronext Amsterdam</span>
+      <button class="live-refresh" onclick="fetchETF()">↻ Opdater</button>
+    </div>
+    <div id="live-body">
+      <div class="live-loading"><span class="spinner"></span>Henter live data...</div>
+    </div>
+  </div>
 
   <div class="toggle-row">
     <span class="toggle-label">ASK-loft:</span>
@@ -95,61 +130,164 @@
     </div>
   </div>
 
-  <p class="footer">Vejledende. Lagerbeskatning trækkes hvert år. MSCI World historisk ~8–10% p.a.</p>
+  <p class="footer">Vejledende. Lagerbeskatning trækkes hvert år. MSCI World historisk ~8–10% p.a. Kurser 15 min. forsinket.</p>
 </div>
 
 <script>
-var loftMode = '500k';
+var loftMode='500k';
+var etfData=null;
 
-function setLoft(m) {
-  loftMode = m;
-  document.getElementById('tog174').className = 'tog' + (m==='174k'?' active':'');
-  document.getElementById('tog500').className = 'tog' + (m==='500k'?' active':'');
+// ── ETF live data ──────────────────────────────────────────
+function fetchETF(){
+  document.getElementById('live-body').innerHTML='<div class="live-loading"><span class="spinner"></span>Henter live data...</div>';
+  var ticker='IWDA.AS';
+  var yahooUrl='https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?interval=1mo&range=11y&includePrePost=false';
+  var proxy='https://api.allorigins.win/raw?url='+encodeURIComponent(yahooUrl);
+  fetch(proxy)
+    .then(function(r){return r.json();})
+    .then(function(json){
+      var res=json.chart&&json.chart.result&&json.chart.result[0];
+      if(!res) throw new Error('No data');
+      var closes=res.indicators.adjclose[0].adjclose;
+      var timestamps=res.timestamp;
+      // filter nulls
+      var pts=[];
+      for(var i=0;i<closes.length;i++){
+        if(closes[i]!=null) pts.push({t:timestamps[i],p:closes[i]});
+      }
+      var cur=pts[pts.length-1].p;
+      var curT=pts[pts.length-1].t;
+      // prev close (last entry)
+      var prevClose=pts[pts.length-2]?pts[pts.length-2].p:cur;
+      // find price N months back
+      function priceNMonthsBack(n){
+        var target=curT-n*30.5*86400;
+        var best=null,bestDiff=Infinity;
+        for(var i=0;i<pts.length;i++){
+          var d=Math.abs(pts[i].t-target);
+          if(d<bestDiff){bestDiff=d;best=pts[i];}
+        }
+        return best?best.p:null;
+      }
+      var p1=priceNMonthsBack(12);
+      var p3=priceNMonthsBack(36);
+      var p5=priceNMonthsBack(60);
+      var p10=priceNMonthsBack(120);
+      function annRet(old,n){if(!old)return null;return (Math.pow(cur/old,1/n)-1)*100;}
+      var dayChange=(cur/prevClose-1)*100;
+      etfData={
+        price:cur,
+        currency:res.meta.currency||'USD',
+        dayChange:dayChange,
+        ret1:p1?(cur/p1-1)*100:null,
+        ret3:annRet(p3,3),
+        ret5:annRet(p5,5),
+        ret10:annRet(p10,10),
+        updated:new Date()
+      };
+      renderETF();
+    })
+    .catch(function(){
+      document.getElementById('live-body').innerHTML='<div class="live-error">⚠️ Kunne ikke hente data. Tjek din forbindelse og prøv igen.</div>';
+    });
+}
+
+function renderETF(){
+  if(!etfData) return;
+  var d=etfData;
+  function retHtml(val,label){
+    if(val==null) return '<div class="ret-box"><div class="ret-lbl">'+label+'</div><div class="ret-val" style="color:#475569">–</div></div>';
+    var cls=val>=0?'pos':'neg';
+    var sign=val>=0?'+':'';
+    return '<div class="ret-box"><div class="ret-lbl">'+label+'</div><div class="ret-val '+cls+'">'+sign+val.toFixed(1)+'%</div></div>';
+  }
+  var chgCls=d.dayChange>=0?'pos':'neg';
+  var chgSign=d.dayChange>=0?'+':'';
+  var timeStr=d.updated.toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
+
+  // suggest return: use 10yr if available, else 5yr, else 8
+  var suggested=d.ret10||d.ret5||8;
+  suggested=Math.round(suggested*2)/2; // round to nearest 0.5
+  suggested=Math.min(Math.max(suggested,3),15);
+
+  var html='';
+  html+='<div class="live-price-row">';
+  html+='<span class="live-price">'+d.price.toFixed(2)+' '+d.currency+'</span>';
+  html+='<span class="live-change '+chgCls+'">'+chgSign+d.dayChange.toFixed(2)+'% i dag</span>';
+  html+='</div>';
+  html+='<div class="live-returns">';
+  html+=retHtml(d.ret1,'1 år');
+  html+=retHtml(d.ret3,'3 år p.a.');
+  html+=retHtml(d.ret5,'5 år p.a.');
+  html+=retHtml(d.ret10,'10 år p.a.');
+  html+='</div>';
+  html+='<button class="live-apply" onclick="applyReturn('+suggested+')">⚡ Brug 10-års afkast ('+suggested+'%) i beregner</button>';
+  html+='<div class="live-meta">Sidst opdateret kl. '+timeStr+' · ca. 15 min. forsinkelse</div>';
+
+  document.getElementById('live-body').innerHTML=html;
+}
+
+function applyReturn(val){
+  document.getElementById('sl-return').value=val;
+  update();
+  // flash feedback
+  var btn=document.querySelector('.live-apply');
+  if(btn){btn.textContent='✓ Anvendt!';setTimeout(function(){renderETF();},1200);}
+}
+
+// ── Loft toggle ───────────────────────────────────────────
+function setLoft(m){
+  loftMode=m;
+  document.getElementById('tog174').className='tog'+(m==='174k'?' active':'');
+  document.getElementById('tog500').className='tog'+(m==='500k'?' active':'');
   update();
 }
 
-function fmtDKK(v) {
-  if (v >= 1e6) return (v/1e6).toFixed(2).replace('.',',')+' mio.';
+// ── Helpers ───────────────────────────────────────────────
+function fmtDKK(v){
+  if(v>=1e6) return (v/1e6).toFixed(2).replace('.',',')+' mio.';
   return Math.round(v).toLocaleString('da-DK')+' kr.';
 }
-function fmtShort(v) {
-  if (v >= 1e6) return (v/1e6).toFixed(1).replace('.',',')+' M';
-  if (v >= 1e3) return (v/1e3).toFixed(0)+' K';
+function fmtShort(v){
+  if(v>=1e6) return (v/1e6).toFixed(1).replace('.',',')+' M';
+  if(v>=1e3) return (v/1e3).toFixed(0)+' K';
   return Math.round(v)+'';
 }
 
-function simulate(start, monthly, ret, years, loft) {
-  var mr = Math.pow(1+ret, 1/12)-1;
-  var askVal=Math.min(start,loft), askYS=askVal, askIn=askVal;
-  var freeVal=Math.max(0,start-loft), freeYS=freeVal, freeIn=freeVal;
-  var freeCarry=0, loftHit=null, rows=[];
-  for (var yr=1; yr<=years; yr++) {
-    var aIn=0, fIn=0;
-    for (var m=0; m<12; m++) {
-      if (askVal < loft) {
-        var room=loft-askVal, dep=Math.min(monthly,room);
-        askVal=askVal*(1+mr)+dep; aIn+=dep;
+// ── Simulation ────────────────────────────────────────────
+function simulate(start,monthly,ret,years,loft){
+  var mr=Math.pow(1+ret,1/12)-1;
+  var askVal=Math.min(start,loft),askYS=askVal,askIn=askVal;
+  var freeVal=Math.max(0,start-loft),freeYS=freeVal,freeIn=freeVal;
+  var freeCarry=0,loftHit=null,rows=[];
+  for(var yr=1;yr<=years;yr++){
+    var aIn=0,fIn=0;
+    for(var m=0;m<12;m++){
+      if(askVal<loft){
+        var room=loft-askVal,dep=Math.min(monthly,room);
+        askVal=askVal*(1+mr)+dep;aIn+=dep;
         var ov=monthly-dep;
-        if (ov>0){freeVal=freeVal*(1+mr)+ov; fIn+=ov;}
-      } else {
+        if(ov>0){freeVal=freeVal*(1+mr)+ov;fIn+=ov;}
+      }else{
         askVal=askVal*(1+mr);
-        freeVal=freeVal*(1+mr)+monthly; fIn+=monthly;
-        if (!loftHit) loftHit=yr;
+        freeVal=freeVal*(1+mr)+monthly;fIn+=monthly;
+        if(!loftHit)loftHit=yr;
       }
     }
-    askIn+=aIn; freeIn+=fIn;
-    var ag=askVal-askYS-aIn; if(ag>0) askVal-=ag*0.17; askYS=askVal;
+    askIn+=aIn;freeIn+=fIn;
+    var ag=askVal-askYS-aIn;if(ag>0)askVal-=ag*0.17;askYS=askVal;
     var fg=freeVal-freeYS-fIn+freeCarry;
-    if(fg>0){freeCarry=0; freeVal-=Math.min(fg,61000)*0.27+Math.max(0,fg-61000)*0.42;}
+    if(fg>0){freeCarry=0;freeVal-=Math.min(fg,61000)*0.27+Math.max(0,fg-61000)*0.42;}
     else{freeCarry=Math.abs(fg);}
     freeYS=freeVal;
-    var tv=askVal+freeVal, ti=askIn+freeIn;
+    var tv=askVal+freeVal,ti=askIn+freeIn;
     rows.push({yr:yr,tv:Math.round(tv),ask:Math.round(askVal),free:Math.round(freeVal),contrib:Math.round(ti),gain:Math.round(tv-ti)});
   }
-  return {rows:rows, loftHit:loftHit};
+  return{rows:rows,loftHit:loftHit};
 }
 
-function update() {
+// ── Main update ───────────────────────────────────────────
+function update(){
   var start=+document.getElementById('sl-start').value;
   var monthly=+document.getElementById('sl-monthly').value;
   var ret=+document.getElementById('sl-return').value;
@@ -160,19 +298,17 @@ function update() {
   document.getElementById('v-return').textContent=ret+'%';
 
   var res=simulate(start,monthly,ret/100,20,loft);
-  var rows=res.rows, lh=res.loftHit;
+  var rows=res.rows,lh=res.loftHit;
 
-  // Notice
   var n=document.getElementById('notice');
   if(lh){
     n.className='notice warn';
-    n.innerHTML='<span>⚠️</span><span>ASK-loftet nås i <strong>år '+lh+'</strong>. Herefter går indskud til frie midler (27/42% skat).</span>';
-  } else {
+    n.innerHTML='<span>⚠️</span><span>ASK-loftet på <strong>'+fmtDKK(loft)+'</strong> nås i <strong>år '+lh+'</strong>. Herefter frie midler (27/42%).</span>';
+  }else{
     n.className='notice ok';
     n.innerHTML='<span>✅</span><span>Alle indskud inden for ASK-loftet i hele 20 år. Kun 17% skat.</span>';
   }
 
-  // Summary cards
   var c4=document.getElementById('cards4');
   c4.innerHTML='';
   [5,10,15,20].forEach(function(h){
@@ -186,87 +322,64 @@ function update() {
     c4.appendChild(div);
   });
 
-  // Chart
-  drawChart(rows, lh);
+  drawChart(rows,lh);
 }
 
-function drawChart(rows, loftHit) {
-  var W=340, H=160, PL=38, PR=10, PT=8, PB=24;
-  var cW=W-PL-PR, cH=H-PT-PB;
+// ── Chart ─────────────────────────────────────────────────
+function drawChart(rows,loftHit){
+  var W=340,H=160,PL=38,PR=10,PT=8,PB=24;
+  var cW=W-PL-PR,cH=H-PT-PB;
   var maxV=0;
   rows.forEach(function(r){if(r.tv>maxV)maxV=r.tv;});
   maxV=maxV*1.08;
-
   function px(yr){return PL+(yr-1)/(rows.length-1)*cW;}
   function py(v){return PT+cH-(v/maxV)*cH;}
-
   function makePath(vals){
-    return vals.map(function(v,i){return (i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
+    return vals.map(function(v,i){return(i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
   }
-  function makeArea(vals, base){
+  function makeArea(vals){
     var p=makePath(vals);
-    var last=vals.length;
-    var bY=py(base).toFixed(1);
-    return p+' L'+px(last).toFixed(1)+','+bY+' L'+px(1).toFixed(1)+','+bY+' Z';
+    var bY=py(0).toFixed(1);
+    return p+' L'+px(vals.length).toFixed(1)+','+bY+' L'+px(1).toFixed(1)+','+bY+' Z';
   }
-
   var contribs=rows.map(function(r){return r.contrib;});
   var asks=rows.map(function(r){return r.ask;});
-  var frees=rows.map(function(r){return r.free;});
   var totals=rows.map(function(r){return r.tv;});
-
-  // Y axis labels
-  var yTicks=[0, maxV*0.25, maxV*0.5, maxV*0.75, maxV];
-  var yLabels=yTicks.map(function(v){return fmtShort(v);});
-
-  // X axis ticks
-  var xTicks=[1,5,10,15,20];
-
+  var hasFree=rows.some(function(r){return r.free>0;});
+  var yTicks=[0,maxV*.25,maxV*.5,maxV*.75,maxV];
   var svg='<defs>'
     +'<linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#475569" stop-opacity=".25"/><stop offset="95%" stop-color="#475569" stop-opacity="0"/></linearGradient>'
     +'<linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#3b82f6" stop-opacity=".4"/><stop offset="95%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient>'
     +'<linearGradient id="gF" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#a78bfa" stop-opacity=".4"/><stop offset="95%" stop-color="#a78bfa" stop-opacity="0"/></linearGradient>'
     +'</defs>';
-
-  // Grid
   yTicks.forEach(function(v){
     var y=py(v).toFixed(1);
     svg+='<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="rgba(255,255,255,.04)" stroke-width="1"/>';
-    svg+='<text x="'+(PL-4)+'" y="'+(+y+3)+'" text-anchor="end" font-size="8" fill="#334155">'+fmtShort(v)+'</text>';
+    svg+='<text x="'+(PL-4)+'" y="'+(parseFloat(y)+3)+'" text-anchor="end" font-size="8" fill="#334155">'+fmtShort(v)+'</text>';
   });
-  xTicks.forEach(function(yr){
-    var x=px(yr).toFixed(1);
-    svg+='<text x="'+x+'" y="'+(H-6)+'" text-anchor="middle" font-size="8" fill="#334155">'+yr+'å</text>';
+  [1,5,10,15,20].forEach(function(yr){
+    svg+='<text x="'+px(yr).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" font-size="8" fill="#334155">'+yr+'å</text>';
   });
-
-  // Areas
-  svg+='<path d="'+makeArea(contribs,0)+'" fill="url(#gC)"/>';
-  svg+='<path d="'+makeArea(asks,0)+'" fill="url(#gA)"/>';
-  if(rows.some(function(r){return r.free>0;})){
-    var stackedFree=rows.map(function(r){return r.tv;});
-    var stackedBase=rows.map(function(r){return r.ask;});
-    var pTop=stackedFree.map(function(v,i){return (i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
-    var pBot=stackedBase.slice().reverse().map(function(v,i){return 'L'+px(rows.length-i).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
+  svg+='<path d="'+makeArea(contribs)+'" fill="url(#gC)"/>';
+  svg+='<path d="'+makeArea(asks)+'" fill="url(#gA)"/>';
+  if(hasFree){
+    var pTop=totals.map(function(v,i){return(i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
+    var pBot=asks.slice().reverse().map(function(v,i){return 'L'+px(rows.length-i).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
     svg+='<path d="'+pTop+' '+pBot+' Z" fill="url(#gF)"/>';
   }
-
-  // Lines
   svg+='<path d="'+makePath(contribs)+'" fill="none" stroke="#475569" stroke-width="1.2"/>';
   svg+='<path d="'+makePath(asks)+'" fill="none" stroke="#3b82f6" stroke-width="2"/>';
-  if(rows.some(function(r){return r.free>0;})){
-    svg+='<path d="'+makePath(totals)+'" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4 2"/>';
-  }
-
-  // Loft hit reference line
-  if(loftHit && loftHit<=20){
+  if(hasFree) svg+='<path d="'+makePath(totals)+'" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4 2"/>';
+  if(loftHit&&loftHit<=20){
     var lx=px(loftHit).toFixed(1);
     svg+='<line x1="'+lx+'" y1="'+PT+'" x2="'+lx+'" y2="'+(H-PB)+'" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3 2"/>';
   }
-
   document.getElementById('chart').innerHTML=svg;
 }
 
+// ── Init ──────────────────────────────────────────────────
 update();
+fetchETF();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
