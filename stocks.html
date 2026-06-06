@@ -135,6 +135,7 @@
 var ticker = '';
 var chartData = null;
 var fundData = null;
+var aiStats = null;
 
 // ── Key storage ───────────────────────────────────────────
 (function(){ try{ var k=localStorage.getItem('or_key'); if(k) document.getElementById('api-key').value=k; }catch(e){} })();
@@ -182,6 +183,7 @@ function load(t) {
   ticker = t;
   chartData = null;
   fundData = null;
+  aiStats = null;
   document.getElementById('ticker-input').value = t;
   document.getElementById('ai-section').style.display = 'none';
   document.getElementById('content').innerHTML =
@@ -194,6 +196,7 @@ function load(t) {
       chartData = data;
       render();
       loadFundamentals(t);
+      fetchAIStats(t);
     })
     .catch(function() {
       document.getElementById('content').innerHTML =
@@ -245,6 +248,12 @@ function render() {
   var pe         = (pr.trailingPE&&pr.trailingPE.raw) || (sd.trailingPE&&sd.trailingPE.raw);
   var divYld     = (sd.dividendYield&&sd.dividendYield.raw);
   var beta       = (ks.beta&&ks.beta.raw) || (sd.beta&&sd.beta.raw);
+  // AI estimate fallback (marked with ~)
+  var mcEst=false, peEst=false, divEst=false, betaEst=false;
+  if(marketCap==null && aiStats && aiStats.marketCap!=null){ marketCap=aiStats.marketCap; mcEst=true; }
+  if(pe==null && aiStats && aiStats.pe!=null){ pe=aiStats.pe; peEst=true; }
+  if(divYld==null && aiStats && aiStats.dividendYield!=null){ divYld=aiStats.dividendYield/100; divEst=true; }
+  if(beta==null && aiStats && aiStats.beta!=null){ beta=aiStats.beta; betaEst=true; }
 
   // Technical indicators
   var ind = calcIndicators(closes);
@@ -267,12 +276,14 @@ function render() {
   html += '<div class="stats-grid">';
   html += sbox('52-ugers høj',  f2(hi52));
   html += sbox('52-ugers lav',  f2(lo52));
-  html += sbox('Markedsværdi',  fBig(marketCap));
-  html += sbox('P/E',           f1(pe));
-  html += sbox('Udbytte',       divYld ? f2(divYld*100)+'%' : '–');
-  html += sbox('Beta',          f1(beta));
+  html += sbox('Markedsværdi',  marketCap!=null ? (mcEst?'~':'')+fBig(marketCap) : '–');
+  html += sbox('P/E',           pe!=null ? (peEst?'~':'')+f1(pe) : '–');
+  html += sbox('Udbytte',       divYld!=null ? (divEst?'~':'')+f2(divYld*100)+'%' : '–');
+  html += sbox('Beta',          beta!=null ? (betaEst?'~':'')+f1(beta) : '–');
   html += '</div>';
-  if(!fundData) html += '<div style="font-size:10px;color:#334155;margin-top:8px;text-align:center;line-height:1.5">💡 Yahoo Finance kræver login for P/E, markedsværdi og beta. <strong style="color:#a78bfa">Kør AI-analysen nedenfor</strong> – den giver dig alle disse tal plus en komplet vurdering.</div>';
+  var anyEst = mcEst||peEst||divEst||betaEst;
+  if(anyEst) html += '<div style="font-size:10px;color:#334155;margin-top:8px;text-align:center;line-height:1.5">~ = AI-estimat (live kursdata fra Yahoo, fundamentaltal fra AI-viden). Kør AI-analysen for fuld vurdering.</div>';
+  else if(!fundData && !aiStats) html += '<div style="font-size:10px;color:#334155;margin-top:8px;text-align:center;line-height:1.5">💡 Indtast OpenRouter-nøgle nedenfor for at udfylde P/E, markedsværdi og beta automatisk.</div>';
   html += '</div>';
 
   // ── Price chart
@@ -432,6 +443,38 @@ function renderEarnings(inc, cur) {
       +'</div>';
   }).join('');
   return '<div class="card"><div class="stitle">📅 Historisk omsætning & resultat</div><div style="display:flex;align-items:flex-end;gap:4px;padding:4px 0">'+bars+'</div><div class="chart-legend" style="margin-top:8px"><span class="leg"><span class="leg-dot" style="background:#3b82f6"></span>Omsætning</span><span class="leg"><span class="leg-dot" style="background:#22c55e"></span>Nettoresultat</span></div></div>';
+}
+
+// ── Quick AI stats fill ───────────────────────────────────
+function fetchAIStats(t) {
+  var key = document.getElementById('api-key').value.trim();
+  if(!key) return; // No key = no AI fill, fields stay –
+  var res = chartData && chartData.chart && chartData.chart.result && chartData.chart.result[0];
+  var name = (res && res.meta && res.meta.symbol) || t;
+  var cur = (res && res.meta && res.meta.currency) || '';
+
+  var prompt = 'Giv de aktuelle nøgletal for aktien med ticker "'+t+'"'+(name!==t?' ('+name+')':'')+'. '
+    + 'Svar KUN med ren JSON, ingen forklaring, ingen markdown, ingen code fence. '
+    + 'Format: {"marketCap": <markedsværdi i hele tal i selskabets rapporteringsvaluta, fx 1240000000000>, "pe": <trailing P/E som tal>, "dividendYield": <udbytteprocent som tal fx 0.5 for 0,5%, eller null>, "beta": <beta som tal>}. '
+    + 'Brug dine senest kendte tal. Hvis et tal er ukendt, brug null. Returner KUN JSON-objektet.';
+
+  fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':'https://rasmusl96.github.io','X-Title':'Aktieanalyse'},
+    body:JSON.stringify({model:'google/gemini-2.5-flash',max_tokens:200,messages:[{role:'user',content:prompt}]})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    var txt = (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content)||'';
+    txt = txt.replace(/```[a-z]*/gi,'').replace(/```/g,'').trim();
+    var m = txt.match(/\{[\s\S]*\}/);
+    if(!m) return;
+    try {
+      aiStats = JSON.parse(m[0]);
+      render(); // Re-render with AI stats
+    } catch(e){}
+  })
+  .catch(function(){});
 }
 
 // ── AI Analysis ───────────────────────────────────────────
