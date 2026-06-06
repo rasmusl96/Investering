@@ -5,267 +5,43 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Investeringsberegner</title>
 
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#070b12" />
-
-  <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Investering" />
   <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="apple-touch-startup-image" href="icon-512.png" />
 
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; background: #070b12; color: #e2e8f0; font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+    input[type=range] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.12); outline: none; width: 100%; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #3b82f6; cursor: pointer; border: 2px solid #1e40af; }
+    button { font-family: 'DM Sans', sans-serif; border: none; }
     #root { min-height: 100%; }
-    input[type=range] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.1); outline: none; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #3b82f6; cursor: pointer; border: 2px solid #1e40af; }
-    button { font-family: 'DM Sans', sans-serif; }
-    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#070b12; color:#3b82f6; font-size:14px; font-family:sans-serif; }
   </style>
 </head>
 <body>
+  <div id="loading">Indlæser...</div>
   <div id="root"></div>
 
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
-
-  <script type="text/babel">
-    const { useState, useMemo } = React;
-    const { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } = Recharts;
-
-    const HORIZONS = [5, 10, 15, 20];
-    const ASK_TAX = 0.17;
-    const FREE_TAX_LOW = 0.27;
-    const FREE_TAX_HIGH = 0.42;
-    const FREE_TAX_THRESHOLD = 61000;
-
-    function formatDKK(val) {
-      if (val >= 1_000_000) return (val / 1_000_000).toFixed(2).replace(".", ",") + " mio.";
-      return Math.round(val).toLocaleString("da-DK") + " kr.";
-    }
-    function formatDKKShort(val) {
-      if (val >= 1_000_000) return (val / 1_000_000).toFixed(1).replace(".", ",") + "M";
-      if (val >= 1_000) return (val / 1_000).toFixed(0) + "K";
-      return Math.round(val).toString();
-    }
-
-    function simulate(startAmount, monthlyContrib, annualReturn, years, loft) {
-      const mr = Math.pow(1 + annualReturn, 1 / 12) - 1;
-      let askValue = Math.min(startAmount, loft);
-      let askYearStart = askValue;
-      let askTotalIn = askValue;
-      let freeValue = Math.max(0, startAmount - loft);
-      let freeYearStart = freeValue;
-      let freeTotalIn = freeValue;
-      let freeCarryLoss = 0;
-      let loftHitYear = null;
-      const yearlyData = [];
-
-      for (let year = 1; year <= years; year++) {
-        let askContribYear = 0;
-        let freeContribYear = 0;
-        for (let m = 0; m < 12; m++) {
-          if (askValue < loft) {
-            const room = loft - askValue;
-            const deposit = Math.min(monthlyContrib, room);
-            askValue = askValue * (1 + mr) + deposit;
-            askContribYear += deposit;
-            const overflow = monthlyContrib - deposit;
-            if (overflow > 0) { freeValue = freeValue * (1 + mr) + overflow; freeContribYear += overflow; }
-          } else {
-            askValue = askValue * (1 + mr);
-            freeValue = freeValue * (1 + mr) + monthlyContrib;
-            freeContribYear += monthlyContrib;
-            if (loftHitYear === null) loftHitYear = year;
-          }
-        }
-        askTotalIn += askContribYear;
-        freeTotalIn += freeContribYear;
-
-        const askGain = askValue - askYearStart - askContribYear;
-        if (askGain > 0) askValue -= askGain * ASK_TAX;
-        askYearStart = askValue;
-
-        const freeGain = freeValue - freeYearStart - freeContribYear + freeCarryLoss;
-        if (freeGain > 0) {
-          freeCarryLoss = 0;
-          freeValue -= Math.min(freeGain, FREE_TAX_THRESHOLD) * FREE_TAX_LOW + Math.max(0, freeGain - FREE_TAX_THRESHOLD) * FREE_TAX_HIGH;
-        } else { freeCarryLoss = Math.abs(freeGain); }
-        freeYearStart = freeValue;
-
-        const totalValue = askValue + freeValue;
-        const totalIn = askTotalIn + freeTotalIn;
-        yearlyData.push({ year, totalValue: Math.round(totalValue), askValue: Math.round(askValue), freeValue: Math.round(freeValue), contributions: Math.round(totalIn), gain: Math.round(totalValue - totalIn) });
-      }
-      return { data: yearlyData, loftHitYear };
-    }
-
-    const CustomTooltip = ({ active, payload, label }) => {
-      if (!active || !payload?.length) return null;
-      const d = payload[0]?.payload;
-      return (
-        <div style={{ background:"#0a0e18", border:"1px solid #1e2535", borderRadius:10, padding:"10px 14px", fontSize:12, minWidth:180 }}>
-          <div style={{ color:"#94a3b8", marginBottom:6, fontWeight:700 }}>År {label}</div>
-          <div style={{ color:"#3b82f6", marginBottom:2 }}>ASK: <strong>{formatDKK(d.askValue)}</strong></div>
-          {d.freeValue > 0 && <div style={{ color:"#a78bfa", marginBottom:2 }}>Frie midler: <strong>{formatDKK(d.freeValue)}</strong></div>}
-          <div style={{ color:"#22c55e" }}>Total: <strong>{formatDKK(d.totalValue)}</strong></div>
-          <div style={{ color:"#334155", marginTop:4, borderTop:"1px solid #1e2535", paddingTop:4 }}>Indskudt: {formatDKK(d.contributions)}</div>
-        </div>
-      );
-    };
-
-    function App() {
-      const [startAmount, setStartAmount] = useState(50000);
-      const [monthly, setMonthly] = useState(5000);
-      const [annualReturn, setAnnualReturn] = useState(8);
-      const [loftMode, setLoftMode] = useState("500k");
-
-      const loft = loftMode === "500k" ? 500000 : 174200;
-      const { data, loftHitYear } = useMemo(
-        () => simulate(startAmount, monthly, annualReturn / 100, 20, loft),
-        [startAmount, monthly, annualReturn, loft]
-      );
-      const summaries = HORIZONS.map(h => ({ years: h, ...data[h - 1] }));
-
-      const S = {
-        wrap: { minHeight:"100vh", background:"linear-gradient(160deg,#070b12 0%,#0d1422 60%,#070b12 100%)", padding:"env(safe-area-inset-top,20px) 16px 40px", paddingTop:"max(env(safe-area-inset-top),20px)" },
-        card: { background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"16px" },
-        label: { fontSize:10, color:"#475569", fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:5 },
-        val: { fontFamily:"'DM Mono',monospace", fontSize:18, fontWeight:600, color:"#38bdf8", marginBottom:6 },
-      };
-
-      return (
-        <div style={S.wrap}>
-          {/* Header */}
-          <div style={{ textAlign:"center", marginBottom:22 }}>
-            <div style={{ background:"linear-gradient(90deg,#3b82f6,#06b6d4)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", marginBottom:6 }}>
-              MSCI World ETF · Aktiesparekonto
-            </div>
-            <h1 style={{ fontSize:22, fontWeight:700, color:"#f1f5f9", marginBottom:4 }}>Investeringsberegner</h1>
-            <p style={{ color:"#475569", fontSize:12 }}>ASK 17% · Frie midler 27/42% lagerbeskatning</p>
-          </div>
-
-          {/* Loft toggle */}
-          <div style={{ display:"flex", gap:8, marginBottom:14, alignItems:"center", justifyContent:"center" }}>
-            <span style={{ fontSize:11, color:"#64748b" }}>ASK-loft:</span>
-            {[["174k","174.200 kr.","Nuværende"],["500k","500.000 kr.","Nyt forslag ✨"]].map(([k,lbl,sub]) => (
-              <button key={k} onClick={() => setLoftMode(k)} style={{
-                background: loftMode===k ? "linear-gradient(135deg,#1d4ed8,#0891b2)" : "rgba(255,255,255,0.04)",
-                border: loftMode===k ? "1px solid #3b82f6" : "1px solid rgba(255,255,255,0.08)",
-                borderRadius:10, padding:"7px 12px", cursor:"pointer",
-                color: loftMode===k ? "#fff" : "#64748b", fontSize:12, fontWeight:600, lineHeight:1.4,
-              }}>
-                {lbl}<br/><span style={{ fontSize:10, opacity:0.75 }}>{sub}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Notice */}
-          {loftHitYear ? (
-            <div style={{ ...S.card, background:"rgba(167,139,250,0.07)", border:"1px solid rgba(167,139,250,0.22)", marginBottom:14, fontSize:12, color:"#a78bfa", display:"flex", gap:8, alignItems:"flex-start" }}>
-              <span>⚠️</span>
-              <span>ASK-loftet nås i <strong>år {loftHitYear}</strong>. Herefter går indskud til frie midler (27/42% skat).</span>
-            </div>
-          ) : (
-            <div style={{ ...S.card, background:"rgba(34,197,94,0.06)", border:"1px solid rgba(34,197,94,0.18)", marginBottom:14, fontSize:12, color:"#4ade80", display:"flex", gap:8, alignItems:"center" }}>
-              <span>✅</span><span>Alle indskud holder sig inden for ASK-loftet i hele 20 år. Kun 17% skat.</span>
-            </div>
-          )}
-
-          {/* Sliders */}
-          <div style={{ ...S.card, marginBottom:14, display:"flex", flexDirection:"column", gap:18 }}>
-            {[
-              { label:"Startbeløb", value:startAmount, setter:setStartAmount, min:0, max:500000, step:5000, fmt:v=>v.toLocaleString("da-DK")+" kr." },
-              { label:"Månedlig investering", value:monthly, setter:setMonthly, min:0, max:20000, step:500, fmt:v=>v.toLocaleString("da-DK")+" kr." },
-              { label:"Forventet afkast p.a.", value:annualReturn, setter:setAnnualReturn, min:3, max:15, step:0.5, fmt:v=>v+"%" },
-            ].map(({ label, value, setter, min, max, step, fmt }) => (
-              <div key={label}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:4 }}>
-                  <span style={S.label}>{label}</span>
-                  <span style={{ ...S.val, marginBottom:0, fontSize:16 }}>{fmt(value)}</span>
-                </div>
-                <input type="range" min={min} max={max} step={step} value={value}
-                  onChange={e => setter(Number(e.target.value))}
-                  style={{ width:"100%", accentColor:"#3b82f6" }} />
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#334155", marginTop:2 }}>
-                  <span>{fmt(min)}</span><span>{fmt(max)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Summary cards */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:14 }}>
-            {summaries.map(({ years, totalValue, contributions, gain, freeValue }) => (
-              <div key={years} style={{ ...S.card, padding:"12px 8px", textAlign:"center", position:"relative", overflow:"hidden" }}>
-                <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,#3b82f6,#06b6d4)" }} />
-                <div style={{ fontSize:10, color:"#475569", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>{years} år</div>
-                <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:600, color:"#f1f5f9", marginBottom:4 }}>{formatDKK(totalValue)}</div>
-                <div style={{ fontSize:11, color:"#22c55e", fontWeight:600 }}>+{formatDKK(gain)}</div>
-                {freeValue > 0 && <div style={{ fontSize:9, color:"#a78bfa", marginTop:2 }}>heraf fri: {formatDKK(freeValue)}</div>}
-              </div>
-            ))}
-          </div>
-
-          {/* Chart */}
-          <div style={{ ...S.card, padding:"16px 4px 10px", marginBottom:14 }}>
-            <div style={{ fontSize:10, color:"#475569", fontWeight:700, letterSpacing:"0.12em", textTransform:"uppercase", textAlign:"center", marginBottom:14 }}>Formueudvikling 20 år</div>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={data} margin={{ top:5, right:8, left:0, bottom:0 }}>
-                <defs>
-                  <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="gF" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#a78bfa" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#a78bfa" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="gC" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#475569" stopOpacity={0.25}/>
-                    <stop offset="95%" stopColor="#475569" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="year" tick={{ fill:"#334155", fontSize:10 }} tickFormatter={v=>`${v}å`} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill:"#334155", fontSize:9 }} tickFormatter={formatDKKShort} axisLine={false} tickLine={false} width={40} />
-                <Tooltip content={<CustomTooltip />} />
-                {loftHitYear && <ReferenceLine x={loftHitYear} stroke="#a78bfa" strokeDasharray="4 3" strokeWidth={1.5} />}
-                <Area type="monotone" dataKey="contributions" stroke="#475569" strokeWidth={1} fill="url(#gC)" />
-                <Area type="monotone" dataKey="askValue" stroke="#3b82f6" strokeWidth={2} fill="url(#gA)" stackId="s" />
-                <Area type="monotone" dataKey="freeValue" stroke="#a78bfa" strokeWidth={2} fill="url(#gF)" stackId="s" />
-              </AreaChart>
-            </ResponsiveContainer>
-            <div style={{ display:"flex", justifyContent:"center", gap:12, marginTop:8 }}>
-              {[["#3b82f6","ASK (17%)"],["#a78bfa","Frie midler"],["#475569","Indskudt"]].map(([c,l]) => (
-                <span key={l} style={{ color:"#475569", display:"flex", alignItems:"center", gap:4, fontSize:10 }}>
-                  <span style={{ width:8, height:8, borderRadius:2, background:c, display:"inline-block" }}/>{l}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ textAlign:"center", fontSize:10, color:"#1e293b", padding:"0 8px" }}>
-            Vejledende. Lagerbeskatning trækkes hvert år. MSCI World historisk ~8–10% p.a.
-          </div>
-        </div>
-      );
-    }
-
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      document.getElementById('loading').style.display = 'none';
+    });
   </script>
+  <script src="app.js"></script>
 
   <script>
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
+      window.addEventListener("load", function() {
+        navigator.serviceWorker.register("./sw.js").catch(function(){});
       });
     }
   </script>
