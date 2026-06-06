@@ -1,49 +1,278 @@
 <!DOCTYPE html>
 <html lang="da">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Investeringsberegner</title>
-
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#070b12" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Investering" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#070b12"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Investering"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: #070b12; color: #e2e8f0; font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
-    input[type=range] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.12); outline: none; width: 100%; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #3b82f6; cursor: pointer; border: 2px solid #1e40af; }
-    button { font-family: 'DM Sans', sans-serif; border: none; }
-    #root { min-height: 100%; }
-    #loading { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#070b12; color:#3b82f6; font-size:14px; font-family:sans-serif; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;background:#070b12;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-tap-highlight-color:transparent}
+    .wrap{padding:max(env(safe-area-inset-top),24px) 16px 48px}
+    .badge{background:linear-gradient(90deg,#3b82f6,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;display:block;text-align:center;margin-bottom:6px}
+    h1{font-size:22px;font-weight:700;color:#f1f5f9;text-align:center;margin-bottom:4px}
+    .sub{color:#475569;font-size:12px;text-align:center;margin-bottom:22px}
+    .toggle-row{display:flex;gap:8px;justify-content:center;align-items:center;margin-bottom:14px}
+    .toggle-label{font-size:11px;color:#64748b}
+    .tog{border-radius:10px;padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600;line-height:1.4;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);color:#64748b;transition:.2s}
+    .tog.active{background:linear-gradient(135deg,#1d4ed8,#0891b2);border-color:#3b82f6;color:#fff}
+    .notice{border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:12px;display:flex;gap:8px}
+    .notice.warn{background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.22);color:#a78bfa}
+    .notice.ok{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.18);color:#4ade80}
+    .card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:16px;margin-bottom:14px}
+    .slider-row{display:flex;flex-direction:column;gap:18px}
+    .sl-item{}
+    .sl-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+    .sl-lbl{font-size:10px;color:#475569;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+    .sl-val{font-family:ui-monospace,monospace;font-size:16px;font-weight:600;color:#38bdf8}
+    input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;background:rgba(255,255,255,.12);outline:none;margin:0}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#3b82f6;border:2px solid #1e40af;cursor:pointer}
+    .sl-minmax{display:flex;justify-content:space-between;font-size:10px;color:#334155;margin-top:2px}
+    .cards4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+    .c4{background:rgba(255,255,255,.025);border:1px solid rgba(59,130,246,.18);border-radius:12px;padding:12px 6px;text-align:center;position:relative;overflow:hidden}
+    .c4::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#3b82f6,#06b6d4)}
+    .c4-yr{font-size:10px;color:#475569;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+    .c4-val{font-family:ui-monospace,monospace;font-size:12px;font-weight:600;color:#f1f5f9;margin-bottom:4px}
+    .c4-gain{font-size:11px;color:#22c55e;font-weight:600}
+    .c4-free{font-size:9px;color:#a78bfa;margin-top:2px}
+    .chart-wrap{background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.05);border-radius:14px;padding:16px 8px 12px;margin-bottom:14px}
+    .chart-title{font-size:10px;color:#475569;font-weight:700;letter-spacing:.12em;text-transform:uppercase;text-align:center;margin-bottom:12px}
+    svg.chart{width:100%;display:block}
+    .legend{display:flex;justify-content:center;gap:14px;margin-top:8px}
+    .leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#475569}
+    .leg-dot{width:8px;height:8px;border-radius:2px;display:inline-block}
+    .footer{text-align:center;font-size:10px;color:#1e293b;padding:0 8px}
   </style>
 </head>
 <body>
-  <div id="loading">Indlæser...</div>
-  <div id="root"></div>
+<div class="wrap">
+  <span class="badge">MSCI World ETF · Aktiesparekonto</span>
+  <h1>Investeringsberegner</h1>
+  <p class="sub">ASK 17% · Frie midler 27/42% lagerbeskatning</p>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
-  <script>
-    window.addEventListener('load', function() {
-      document.getElementById('loading').style.display = 'none';
-    });
-  </script>
-  <script src="app.js"></script>
+  <div class="toggle-row">
+    <span class="toggle-label">ASK-loft:</span>
+    <button class="tog" id="tog174" onclick="setLoft('174k')">174.200 kr.<br><span style="font-size:10px;opacity:.75">Nuværende</span></button>
+    <button class="tog active" id="tog500" onclick="setLoft('500k')">500.000 kr.<br><span style="font-size:10px;opacity:.75">Nyt forslag ✨</span></button>
+  </div>
 
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function() {
-        navigator.serviceWorker.register("./sw.js").catch(function(){});
-      });
+  <div class="notice" id="notice"></div>
+
+  <div class="card">
+    <div class="slider-row">
+      <div class="sl-item">
+        <div class="sl-top"><span class="sl-lbl">Startbeløb</span><span class="sl-val" id="v-start">50.000 kr.</span></div>
+        <input type="range" min="0" max="500000" step="5000" value="50000" id="sl-start" oninput="update()"/>
+        <div class="sl-minmax"><span>0 kr.</span><span>500.000 kr.</span></div>
+      </div>
+      <div class="sl-item">
+        <div class="sl-top"><span class="sl-lbl">Månedlig investering</span><span class="sl-val" id="v-monthly">5.000 kr.</span></div>
+        <input type="range" min="0" max="20000" step="500" value="5000" id="sl-monthly" oninput="update()"/>
+        <div class="sl-minmax"><span>0 kr.</span><span>20.000 kr.</span></div>
+      </div>
+      <div class="sl-item">
+        <div class="sl-top"><span class="sl-lbl">Forventet afkast p.a.</span><span class="sl-val" id="v-return">8%</span></div>
+        <input type="range" min="3" max="15" step="0.5" value="8" id="sl-return" oninput="update()"/>
+        <div class="sl-minmax"><span>3%</span><span>15%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cards4" id="cards4"></div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">Formueudvikling 20 år</div>
+    <svg class="chart" id="chart" viewBox="0 0 340 180"></svg>
+    <div class="legend">
+      <span class="leg"><span class="leg-dot" style="background:#3b82f6"></span>ASK (17%)</span>
+      <span class="leg"><span class="leg-dot" style="background:#a78bfa"></span>Frie midler</span>
+      <span class="leg"><span class="leg-dot" style="background:#475569"></span>Indskudt</span>
+    </div>
+  </div>
+
+  <p class="footer">Vejledende. Lagerbeskatning trækkes hvert år. MSCI World historisk ~8–10% p.a.</p>
+</div>
+
+<script>
+var loftMode = '500k';
+
+function setLoft(m) {
+  loftMode = m;
+  document.getElementById('tog174').className = 'tog' + (m==='174k'?' active':'');
+  document.getElementById('tog500').className = 'tog' + (m==='500k'?' active':'');
+  update();
+}
+
+function fmtDKK(v) {
+  if (v >= 1e6) return (v/1e6).toFixed(2).replace('.',',')+' mio.';
+  return Math.round(v).toLocaleString('da-DK')+' kr.';
+}
+function fmtShort(v) {
+  if (v >= 1e6) return (v/1e6).toFixed(1).replace('.',',')+' M';
+  if (v >= 1e3) return (v/1e3).toFixed(0)+' K';
+  return Math.round(v)+'';
+}
+
+function simulate(start, monthly, ret, years, loft) {
+  var mr = Math.pow(1+ret, 1/12)-1;
+  var askVal=Math.min(start,loft), askYS=askVal, askIn=askVal;
+  var freeVal=Math.max(0,start-loft), freeYS=freeVal, freeIn=freeVal;
+  var freeCarry=0, loftHit=null, rows=[];
+  for (var yr=1; yr<=years; yr++) {
+    var aIn=0, fIn=0;
+    for (var m=0; m<12; m++) {
+      if (askVal < loft) {
+        var room=loft-askVal, dep=Math.min(monthly,room);
+        askVal=askVal*(1+mr)+dep; aIn+=dep;
+        var ov=monthly-dep;
+        if (ov>0){freeVal=freeVal*(1+mr)+ov; fIn+=ov;}
+      } else {
+        askVal=askVal*(1+mr);
+        freeVal=freeVal*(1+mr)+monthly; fIn+=monthly;
+        if (!loftHit) loftHit=yr;
+      }
     }
-  </script>
+    askIn+=aIn; freeIn+=fIn;
+    var ag=askVal-askYS-aIn; if(ag>0) askVal-=ag*0.17; askYS=askVal;
+    var fg=freeVal-freeYS-fIn+freeCarry;
+    if(fg>0){freeCarry=0; freeVal-=Math.min(fg,61000)*0.27+Math.max(0,fg-61000)*0.42;}
+    else{freeCarry=Math.abs(fg);}
+    freeYS=freeVal;
+    var tv=askVal+freeVal, ti=askIn+freeIn;
+    rows.push({yr:yr,tv:Math.round(tv),ask:Math.round(askVal),free:Math.round(freeVal),contrib:Math.round(ti),gain:Math.round(tv-ti)});
+  }
+  return {rows:rows, loftHit:loftHit};
+}
+
+function update() {
+  var start=+document.getElementById('sl-start').value;
+  var monthly=+document.getElementById('sl-monthly').value;
+  var ret=+document.getElementById('sl-return').value;
+  var loft=loftMode==='500k'?500000:174200;
+
+  document.getElementById('v-start').textContent=start.toLocaleString('da-DK')+' kr.';
+  document.getElementById('v-monthly').textContent=monthly.toLocaleString('da-DK')+' kr.';
+  document.getElementById('v-return').textContent=ret+'%';
+
+  var res=simulate(start,monthly,ret/100,20,loft);
+  var rows=res.rows, lh=res.loftHit;
+
+  // Notice
+  var n=document.getElementById('notice');
+  if(lh){
+    n.className='notice warn';
+    n.innerHTML='<span>⚠️</span><span>ASK-loftet nås i <strong>år '+lh+'</strong>. Herefter går indskud til frie midler (27/42% skat).</span>';
+  } else {
+    n.className='notice ok';
+    n.innerHTML='<span>✅</span><span>Alle indskud inden for ASK-loftet i hele 20 år. Kun 17% skat.</span>';
+  }
+
+  // Summary cards
+  var c4=document.getElementById('cards4');
+  c4.innerHTML='';
+  [5,10,15,20].forEach(function(h){
+    var d=rows[h-1];
+    var div=document.createElement('div');
+    div.className='c4';
+    div.innerHTML='<div class="c4-yr">'+h+' år</div>'
+      +'<div class="c4-val">'+fmtDKK(d.tv)+'</div>'
+      +'<div class="c4-gain">+'+fmtDKK(d.gain)+'</div>'
+      +(d.free>0?'<div class="c4-free">fri: '+fmtDKK(d.free)+'</div>':'');
+    c4.appendChild(div);
+  });
+
+  // Chart
+  drawChart(rows, lh);
+}
+
+function drawChart(rows, loftHit) {
+  var W=340, H=160, PL=38, PR=10, PT=8, PB=24;
+  var cW=W-PL-PR, cH=H-PT-PB;
+  var maxV=0;
+  rows.forEach(function(r){if(r.tv>maxV)maxV=r.tv;});
+  maxV=maxV*1.08;
+
+  function px(yr){return PL+(yr-1)/(rows.length-1)*cW;}
+  function py(v){return PT+cH-(v/maxV)*cH;}
+
+  function makePath(vals){
+    return vals.map(function(v,i){return (i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
+  }
+  function makeArea(vals, base){
+    var p=makePath(vals);
+    var last=vals.length;
+    var bY=py(base).toFixed(1);
+    return p+' L'+px(last).toFixed(1)+','+bY+' L'+px(1).toFixed(1)+','+bY+' Z';
+  }
+
+  var contribs=rows.map(function(r){return r.contrib;});
+  var asks=rows.map(function(r){return r.ask;});
+  var frees=rows.map(function(r){return r.free;});
+  var totals=rows.map(function(r){return r.tv;});
+
+  // Y axis labels
+  var yTicks=[0, maxV*0.25, maxV*0.5, maxV*0.75, maxV];
+  var yLabels=yTicks.map(function(v){return fmtShort(v);});
+
+  // X axis ticks
+  var xTicks=[1,5,10,15,20];
+
+  var svg='<defs>'
+    +'<linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#475569" stop-opacity=".25"/><stop offset="95%" stop-color="#475569" stop-opacity="0"/></linearGradient>'
+    +'<linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#3b82f6" stop-opacity=".4"/><stop offset="95%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient>'
+    +'<linearGradient id="gF" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#a78bfa" stop-opacity=".4"/><stop offset="95%" stop-color="#a78bfa" stop-opacity="0"/></linearGradient>'
+    +'</defs>';
+
+  // Grid
+  yTicks.forEach(function(v){
+    var y=py(v).toFixed(1);
+    svg+='<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="rgba(255,255,255,.04)" stroke-width="1"/>';
+    svg+='<text x="'+(PL-4)+'" y="'+(+y+3)+'" text-anchor="end" font-size="8" fill="#334155">'+fmtShort(v)+'</text>';
+  });
+  xTicks.forEach(function(yr){
+    var x=px(yr).toFixed(1);
+    svg+='<text x="'+x+'" y="'+(H-6)+'" text-anchor="middle" font-size="8" fill="#334155">'+yr+'å</text>';
+  });
+
+  // Areas
+  svg+='<path d="'+makeArea(contribs,0)+'" fill="url(#gC)"/>';
+  svg+='<path d="'+makeArea(asks,0)+'" fill="url(#gA)"/>';
+  if(rows.some(function(r){return r.free>0;})){
+    var stackedFree=rows.map(function(r){return r.tv;});
+    var stackedBase=rows.map(function(r){return r.ask;});
+    var pTop=stackedFree.map(function(v,i){return (i===0?'M':'L')+px(i+1).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
+    var pBot=stackedBase.slice().reverse().map(function(v,i){return 'L'+px(rows.length-i).toFixed(1)+','+py(v).toFixed(1);}).join(' ');
+    svg+='<path d="'+pTop+' '+pBot+' Z" fill="url(#gF)"/>';
+  }
+
+  // Lines
+  svg+='<path d="'+makePath(contribs)+'" fill="none" stroke="#475569" stroke-width="1.2"/>';
+  svg+='<path d="'+makePath(asks)+'" fill="none" stroke="#3b82f6" stroke-width="2"/>';
+  if(rows.some(function(r){return r.free>0;})){
+    svg+='<path d="'+makePath(totals)+'" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4 2"/>';
+  }
+
+  // Loft hit reference line
+  if(loftHit && loftHit<=20){
+    var lx=px(loftHit).toFixed(1);
+    svg+='<line x1="'+lx+'" y1="'+PT+'" x2="'+lx+'" y2="'+(H-PB)+'" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3 2"/>';
+  }
+
+  document.getElementById('chart').innerHTML=svg;
+}
+
+update();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+  });
+}
+</script>
 </body>
 </html>
